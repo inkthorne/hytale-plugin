@@ -1,0 +1,12 @@
+{
+  "Group": "YourName",
+  "Name": "ExamplePlugin",
+  "Version": "0.1.0",
+  "Description": "A simple Hello World command plugin",
+  "Authors": [
+    {
+      "Name": "YourName"
+    }
+  ],
+  "Main": "com.example.myplugin.ExamplePlugin"
+}
