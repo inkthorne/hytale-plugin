@@ -71,19 +71,28 @@ hytale-plugin-template/
 
 See the `docs/` folder for extracted Hytale API documentation:
 
+- [Overview](docs/overview.md) - Start here for API navigation
 - [Plugin Lifecycle](docs/plugin-lifecycle.md)
 - [Commands](docs/commands.md)
 - [Entities](docs/entities.md)
+- [Player](docs/player.md)
+- [NPC](docs/npc.md)
 - [World](docs/world.md)
+- [Blocks](docs/blocks.md)
+- [Prefabs](docs/prefabs.md)
 - [Events](docs/events.md)
 - [Components (ECS)](docs/components.md)
-- [Messaging](docs/messaging.md)
+- [Combat](docs/combat.md)
+- [Projectiles](docs/projectiles.md)
+- [Collision](docs/collision.md)
+- [Adventure](docs/adventure.md)
 - [Permissions](docs/permissions.md)
 - [Inventory](docs/inventory.md)
 - [Tasks](docs/tasks.md)
 - [UI](docs/ui.md)
-- [Blocks](docs/blocks.md)
 - [Assets](docs/assets.md)
+- [Codecs](docs/codecs.md)
+- [Math](docs/math.md)
 
 ## Creating Commands
 
