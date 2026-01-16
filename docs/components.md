@@ -399,3 +399,70 @@ MyWorldResource resource = store.getResource(MyWorldResource.getResourceType());
 // Replace resource
 store.replaceResource(MyWorldResource.getResourceType(), newResource);
 ```
+
+---
+
+## Ticking Systems
+
+For per-frame entity processing, extend `EntityTickingSystem`.
+
+### EntityTickingSystem<ECS_TYPE>
+**Package:** `com.hypixel.hytale.component.system.tick`
+
+Abstract base class for systems that process entities every tick. Part of the system hierarchy:
+
+```
+ISystem (interface)
+  └── System (abstract)
+        └── TickingSystem (abstract)
+              └── ArchetypeTickingSystem (abstract)
+                    └── EntityTickingSystem (abstract)
+```
+
+#### Methods to Override
+```java
+// Called once per entity per tick
+public abstract void tick(float deltaTime, int index,
+                          ArchetypeChunk<ECS_TYPE> chunk,
+                          Store<ECS_TYPE> store,
+                          CommandBuffer<ECS_TYPE> buffer);
+
+// Define which entities to process (from QuerySystem interface)
+public Query<ECS_TYPE> getQuery();
+```
+
+#### Example: Per-Player Ticking System
+```java
+import com.hypixel.hytale.component.*;
+import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
+import com.hypixel.hytale.component.query.Query;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+
+public class MyTickingSystem extends EntityTickingSystem<EntityStore> {
+
+    @Override
+    public void tick(float deltaTime, int index, ArchetypeChunk<EntityStore> chunk,
+                     Store<EntityStore> store, CommandBuffer<EntityStore> buffer) {
+        Player player = chunk.getComponent(index, Player.getComponentType());
+        if (player == null) return;
+
+        // Process player each tick
+        // deltaTime = time since last tick in seconds
+    }
+
+    @Override
+    public Query<EntityStore> getQuery() {
+        // Only tick entities with Player component
+        return Player.getComponentType();
+    }
+}
+```
+
+#### Registering the System
+```java
+@Override
+protected void setup() {
+    getEntityStoreRegistry().registerSystem(new MyTickingSystem());
+}
+```

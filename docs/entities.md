@@ -213,3 +213,167 @@ protected void execute(CommandContext ctx, Store<EntityStore> store,
     Transform transform = playerRef.getTransform();
 }
 ```
+
+---
+
+## Entity Stats (EntityStatMap)
+
+Component that holds entity stats like health, stamina, mana, etc.
+
+**Package:** `com.hypixel.hytale.server.core.modules.entitystats`
+
+### Getting the Component
+
+```java
+EntityStatMap stats = store.getComponent(ref, EntityStatMap.getComponentType());
+```
+
+### DefaultEntityStatTypes
+
+**Package:** `com.hypixel.hytale.server.core.modules.entitystats.asset`
+
+Provides stat indices for common stats:
+
+```java
+int healthIndex = DefaultEntityStatTypes.getHealth();
+int oxygenIndex = DefaultEntityStatTypes.getOxygen();
+int staminaIndex = DefaultEntityStatTypes.getStamina();
+int manaIndex = DefaultEntityStatTypes.getMana();
+int signatureIndex = DefaultEntityStatTypes.getSignatureEnergy();
+int ammoIndex = DefaultEntityStatTypes.getAmmo();
+```
+
+### Modifying Stats
+
+```java
+EntityStatMap stats = store.getComponent(ref, EntityStatMap.getComponentType());
+int healthIndex = DefaultEntityStatTypes.getHealth();
+
+// Modify stat values
+stats.subtractStatValue(healthIndex, 5.0f);   // Subtract 5 health
+stats.addStatValue(healthIndex, 10.0f);       // Add 10 health
+stats.setStatValue(healthIndex, 100.0f);      // Set to 100
+stats.maximizeStatValue(healthIndex);         // Set to max
+stats.minimizeStatValue(healthIndex);         // Set to min (usually 0)
+```
+
+### Reading Stat Values
+
+```java
+EntityStatValue healthStat = stats.get(healthIndex);
+float currentHealth = healthStat.get();
+float maxHealth = healthStat.getMax();
+float minHealth = healthStat.getMin();
+```
+
+### Example: Damage Player on Hit
+
+```java
+// In a damage event handler, subtract health from attacker
+if (source instanceof Damage.EntitySource entitySource) {
+    Ref<EntityStore> attackerRef = entitySource.getRef();
+    EntityStatMap stats = store.getComponent(attackerRef, EntityStatMap.getComponentType());
+    if (stats != null) {
+        int healthIndex = DefaultEntityStatTypes.getHealth();
+        stats.subtractStatValue(healthIndex, 5.0f);
+    }
+}
+```
+
+---
+
+## Velocity API
+
+Component for applying forces and impulses to entities.
+
+**Package:** `com.hypixel.hytale.server.core.modules.physics.component`
+
+### Getting the Component
+
+```java
+Velocity velocity = store.getComponent(ref, Velocity.getComponentType());
+```
+
+Or when you have a chunk index:
+```java
+Velocity velocity = chunk.getComponent(index, Velocity.getComponentType());
+```
+
+### Important: Player vs NPC Velocity
+
+Players are **client-authoritative** for movement. The server cannot directly modify player velocity - changes must be synchronized to the client via the instruction system.
+
+| Method | Use Case | Client Sync |
+|--------|----------|-------------|
+| `addForce(x,y,z)` | Server-side physics (untested) | No |
+| `set(x,y,z)` | Server-side physics (untested) | No |
+| `addInstruction(...)` | **All entities** (players + NPCs) | Yes |
+
+### Applying Velocity to Players
+
+Use `addInstruction()` for players - this queues velocity changes that get synchronized to the client:
+
+```java
+Velocity velocity = chunk.getComponent(index, Velocity.getComponentType());
+if (velocity != null) {
+    Vector3d impulse = new Vector3d(0.0, 15.0, 0.0);  // Upward impulse
+    VelocityConfig config = new VelocityConfig();
+    velocity.addInstruction(impulse, config, ChangeVelocityType.Add);
+}
+```
+
+### VelocityConfig
+
+**Package:** `com.hypixel.hytale.server.core.modules.physics.velocity`
+
+Configuration for velocity behavior. Default constructor provides standard physics behavior.
+
+### ChangeVelocityType
+
+**Package:** `com.hypixel.hytale.server.core.modules.physics.velocity`
+
+Enum controlling how velocity is applied:
+- `Add` - Add to current velocity
+- `Set` - Replace current velocity
+
+### Applying Velocity to NPCs/Entities
+
+For NPCs and creatures, `addInstruction()` works the same as for players:
+
+```java
+Velocity velocity = chunk.getComponent(index, Velocity.getComponentType());
+if (velocity != null) {
+    Vector3d impulse = new Vector3d(0.0, 15.0, 0.0);
+    VelocityConfig config = new VelocityConfig();
+    velocity.addInstruction(impulse, config, ChangeVelocityType.Add);
+}
+```
+
+Note: `addForce()` and `set()` exist but haven't been verified to work.
+
+### Example: Launch Player Upward
+
+```java
+public void launchPlayer(Store<EntityStore> store, Ref<EntityStore> ref) {
+    Velocity velocity = store.getComponent(ref, Velocity.getComponentType());
+    if (velocity != null) {
+        Vector3d impulse = new Vector3d(0.0, 20.0, 0.0);
+        VelocityConfig config = new VelocityConfig();
+        velocity.addInstruction(impulse, config, ChangeVelocityType.Add);
+    }
+}
+```
+
+### Example: Knockback from Damage
+
+```java
+// In a damage system, apply knockback to the damaged entity
+public void applyKnockback(Velocity velocity, Vector3d direction, double force) {
+    Vector3d knockback = new Vector3d(
+        direction.getX() * force,
+        5.0,  // Small upward component
+        direction.getZ() * force
+    );
+    VelocityConfig config = new VelocityConfig();
+    velocity.addInstruction(knockback, config, ChangeVelocityType.Add);
+}

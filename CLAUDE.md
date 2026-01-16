@@ -8,23 +8,7 @@ This is a Hytale server plugin template using Java 25 and Gradle. It provides an
 
 ## Hytale API Documentation
 
-**IMPORTANT:** Before parsing `HytaleServer.jar`, check the `docs/` directory for pre-extracted API documentation:
-
-- `docs/plugin-lifecycle.md` - JavaPlugin, PluginBase, setup/start lifecycle
-- `docs/commands.md` - AbstractPlayerCommand, CommandContext, arguments
-- `docs/entities.md` - Player, PlayerRef, Entity, LivingEntity
-- `docs/world.md` - World, chunks, players, spawning
-- `docs/events.md` - EventRegistry, listener registration
-- `docs/components.md` - ECS system (Store, Ref, Component)
-- `docs/messaging.md` - Message formatting and translations
-- `docs/permissions.md` - Permission checks
-- `docs/inventory.md` - Inventory, ItemStack
-- `docs/tasks.md` - TaskRegistry, async tasks
-- `docs/ui.md` - UI managers and builders
-- `docs/blocks.md` - BlockStateRegistry
-- `docs/assets.md` - AssetRegistry, prefabs
-
-These docs contain class signatures, method lists, and usage examples extracted from the JAR.
+**IMPORTANT:** Before parsing `HytaleServer.jar`, check `docs/overview.md` for pre-extracted API documentation and navigation to specific topics.
 
 ## Build Commands
 

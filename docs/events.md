@@ -112,7 +112,7 @@ getEventRegistry().register((short) 100, PlayerConnectEvent.class, event -> {
 | `PlayerChatEvent` | Player sends a chat message |
 | `PlayerInteractEvent` | Player interacts with something |
 | `PlayerCraftEvent` | Player crafts an item |
-| `PlayerMouseButtonEvent` | Player mouse button input |
+| `PlayerMouseButtonEvent` | Player mouse button input (⚠️ client-side only, does not fire on server) |
 | `PlayerMouseMotionEvent` | Player mouse movement |
 | `AddPlayerToWorldEvent` | Player added to a world |
 | `DrainPlayerFromWorldEvent` | Player removed from a world |
@@ -250,5 +250,104 @@ public class PlaceBlockEventSystem extends EntityEventSystem<EntityStore, PlaceB
 protected void setup() {
     // Register ECS event system
     getEntityStoreRegistry().registerSystem(new PlaceBlockEventSystem());
+}
+```
+
+## Damage Events (DamageEventSystem)
+
+Handle damage events when entities receive damage. Extend `DamageEventSystem` (not raw `EntityEventSystem`).
+
+**Package:** `com.hypixel.hytale.server.core.modules.entity.damage`
+
+### Key Classes
+
+| Class | Description |
+|-------|-------------|
+| `Damage` | ECS event fired when damage occurs. Extends `CancellableEcsEvent` |
+| `DamageEventSystem` | Abstract base class for handling Damage events |
+| `Damage.Source` | Interface for damage sources |
+| `Damage.EntitySource` | Source when damage comes from an entity (player/mob) |
+| `Damage.EnvironmentSource` | Source for environmental damage (fall, drowning) |
+| `Damage.ProjectileSource` | Source for projectile damage (arrows) |
+| `Damage.CommandSource` | Source for damage from commands |
+| `DamageDataComponent` | Component on entities that can receive damage |
+
+### Damage Class Methods
+
+```java
+// Get who/what caused the damage
+Damage.Source getSource()
+
+// Get damage amount
+float getAmount()
+float getInitialAmount()
+
+// Get damage cause
+DamageCause getCause()
+int getDamageCauseIndex()
+
+// Cancellable
+boolean isCancelled()
+void setCancelled(boolean)
+```
+
+### Important Notes
+
+1. **Event fires on VICTIM**: The Damage event is invoked on the entity receiving damage, not the attacker
+2. **Getting the attacker**: Use `Damage.EntitySource.getRef()` to get the attacker's entity reference
+3. **getQuery() required**: Must return a valid query (not null). Use `DamageDataComponent.getComponentType()`
+4. **Extend DamageEventSystem**: Use the provided base class, not raw `EntityEventSystem<EntityStore, Damage>`
+
+### Creating a Damage Handler
+
+```java
+import com.hypixel.hytale.component.*;
+import com.hypixel.hytale.component.query.Query;
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.entity.damage.DamageDataComponent;
+import com.hypixel.hytale.server.core.modules.entity.damage.Damage;
+import com.hypixel.hytale.server.core.modules.entity.damage.DamageEventSystem;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+
+public class MyDamageSystem extends DamageEventSystem {
+
+    public MyDamageSystem() {
+        super();
+    }
+
+    @Override
+    public void handle(int index, ArchetypeChunk<EntityStore> chunk,
+                       Store<EntityStore> store, CommandBuffer<EntityStore> buffer,
+                       Damage event) {
+        // NOTE: This fires on the VICTIM entity (receiving damage)
+
+        Damage.Source source = event.getSource();
+        if (source instanceof Damage.EntitySource entitySource) {
+            // Get the attacker's entity reference
+            Ref<EntityStore> attackerRef = entitySource.getRef();
+
+            // Check if attacker is a player
+            Player attacker = store.getComponent(attackerRef, Player.getComponentType());
+            if (attacker != null) {
+                attacker.sendMessage(Message.raw("You hit something for " + event.getAmount() + " damage!"));
+            }
+        }
+    }
+
+    @Override
+    public Query<EntityStore> getQuery() {
+        // Match entities that can receive damage
+        return DamageDataComponent.getComponentType();
+    }
+}
+```
+
+### Registering the Damage System
+
+```java
+@Override
+protected void setup() {
+    getEntityStoreRegistry().registerSystem(new MyDamageSystem());
 }
 ```
