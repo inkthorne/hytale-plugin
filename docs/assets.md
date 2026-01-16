@@ -76,6 +76,106 @@ Common asset type configurations:
 
 ---
 
+## Model
+**Package:** `com.hypixel.hytale.server.core.asset.type.model.config`
+
+Represents a 3D model configuration for entities, items, and projectiles.
+
+**Implements:** `NetworkSerializable<Model>`
+
+### Constants
+```java
+static final String UNKNOWN_TEXTURE;  // Fallback texture ID
+```
+
+### Key Methods
+```java
+// Identity
+String getModelAssetId()        // Asset ID reference
+String getModel()               // Model file path
+String getTexture()             // Texture file path
+
+// Scale and transforms
+float getScale()
+
+// Bounding boxes
+Box getBoundingBox()
+Box getBoundingBox(MovementStates states)
+Box getCrouchBoundingBox()
+
+// Eye height
+float getEyeHeight()
+float getEyeHeight(Ref<EntityStore> ref, ComponentAccessor<EntityStore> accessor)
+float getCrouchOffset()
+
+// Gradients (color variations)
+String getGradientSet()
+String getGradientId()
+
+// Attachments (items, accessories)
+ModelAttachment[] getAttachments()
+Map<String, String> getRandomAttachmentIds()
+
+// Animations
+Map<String, ModelAsset.AnimationSet> getAnimationSetMap()
+String getFirstBoundAnimationId(String... animationNames)
+String getFirstBoundAnimationId(String set, String name)
+
+// Visual effects
+ColorLight getLight()           // Emissive lighting
+ModelParticle[] getParticles()  // Particle effects
+ModelTrail[] getTrails()        // Trail effects
+CameraSettings getCamera()      // Camera configuration
+
+// Physics
+PhysicsValues getPhysicsValues()
+
+// Detail boxes (hitboxes, selection boxes)
+Map<String, DetailBox[]> getDetailBoxes()
+
+// Phobia settings (accessibility)
+Phobia getPhobia()
+String getPhobiaModelAssetId()
+
+// Network
+Model toPacket()
+Model.ModelReference toReference()
+```
+
+### Static Factory Methods
+```java
+// Create models from ModelAsset with different scaling
+static Model createRandomScaleModel(ModelAsset asset)
+static Model createStaticScaledModel(ModelAsset asset, float scale)
+static Model createUnitScaleModel(ModelAsset asset)
+static Model createUnitScaleModel(ModelAsset asset, Box boundingBox)
+static Model createScaledModel(ModelAsset asset, float scale)
+static Model createScaledModel(ModelAsset asset, float scale, Map<String, String> attachments)
+static Model createScaledModel(ModelAsset asset, float scale, Map<String, String> attachments, Box boundingBox)
+static Model createScaledModel(ModelAsset asset, float scale, Map<String, String> attachments, Box boundingBox, boolean flag)
+```
+
+### Usage Example
+```java
+// Get model from a projectile config
+ProjectileConfig config = ProjectileConfig.getAssetMap().get("arrow");
+Model model = config.getModel();
+
+// Access model properties
+float scale = model.getScale();
+Box bounds = model.getBoundingBox();
+String texture = model.getTexture();
+
+// Get particle effects
+ModelParticle[] particles = model.getParticles();
+
+// Check animations
+Map<String, ModelAsset.AnimationSet> animations = model.getAnimationSetMap();
+String idleAnim = model.getFirstBoundAnimationId("idle", "default");
+```
+
+---
+
 ## JSON Asset Pattern
 
 Assets in Hytale typically follow a JSON-based pattern with codec serialization:

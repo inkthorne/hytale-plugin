@@ -93,6 +93,152 @@ public class JavaPluginInit extends PluginInit {
 }
 ```
 
+---
+
+## PluginState
+**Package:** `com.hypixel.hytale.server.core.plugin`
+
+Enum representing the current lifecycle state of a plugin. Get via `getState()`.
+
+```java
+public enum PluginState {
+    NONE,      // Initial state before setup
+    SETUP,     // Currently in setup() phase
+    START,     // Currently in start() phase
+    ENABLED,   // Fully enabled and running
+    SHUTDOWN,  // Currently shutting down
+    DISABLED   // Fully disabled
+}
+```
+
+### Usage Example
+```java
+if (getState() == PluginState.ENABLED) {
+    // Plugin is fully running
+}
+```
+
+---
+
+## PluginIdentifier
+**Package:** `com.hypixel.hytale.common.plugin`
+
+Identifies a plugin by group and name. Get via `getIdentifier()`.
+
+### Methods
+```java
+String getGroup()                              // Plugin group (e.g., "com.example")
+String getName()                               // Plugin name
+static PluginIdentifier fromString(String s)   // Parse from "group:name" format
+```
+
+### Usage Example
+```java
+PluginIdentifier id = getIdentifier();
+String fullName = id.getGroup() + ":" + id.getName();
+```
+
+---
+
+## PluginManifest
+**Package:** `com.hypixel.hytale.common.plugin`
+
+Contains plugin metadata from `manifest.json`. Get via `getManifest()`.
+
+### Identity
+```java
+String getGroup()                    // Plugin group
+String getName()                     // Plugin name
+Semver getVersion()                  // Version (semantic versioning)
+String getMain()                     // Main class path
+```
+
+### Metadata
+```java
+String getDescription()              // Plugin description
+List<AuthorInfo> getAuthors()        // Author information
+String getWebsite()                  // Plugin website URL
+```
+
+### Dependencies
+```java
+Map<PluginIdentifier, SemverRange> getDependencies()          // Required dependencies
+Map<PluginIdentifier, SemverRange> getOptionalDependencies()  // Optional dependencies
+Map<PluginIdentifier, SemverRange> getLoadBefore()            // Plugins to load before
+SemverRange getServerVersion()                                 // Required server version
+```
+
+### Other
+```java
+boolean isDisabledByDefault()        // Whether disabled by default
+boolean includesAssetPack()          // Whether plugin includes assets
+List<PluginManifest> getSubPlugins() // Sub-plugin manifests
+```
+
+---
+
+## HytaleLogger
+**Package:** `com.hypixel.hytale.logger`
+
+Fluent logging API based on Google Flogger. Get via `getLogger()` in your plugin.
+
+### Getting a Logger
+```java
+// In PluginBase (your plugin)
+HytaleLogger logger = getLogger();
+
+// Static access
+HytaleLogger logger = HytaleLogger.forEnclosingClass();
+HytaleLogger logger = HytaleLogger.get("my.logger.name");
+```
+
+### Logging Methods (Fluent API)
+```java
+// Log at different levels
+getLogger().atInfo().log("Server started");
+getLogger().atWarning().log("Something might be wrong");
+getLogger().atSevere().log("Critical error occurred");
+getLogger().atFine().log("Debug information");
+
+// With formatting
+getLogger().atInfo().log("Player %s joined", playerName);
+getLogger().atInfo().log("Count: %d, Value: %.2f", count, value);
+
+// With exceptions
+getLogger().atSevere().withCause(exception).log("Operation failed");
+```
+
+### Log Levels
+Use `at(Level)` with standard `java.util.logging.Level` values:
+- `atSevere()` - Errors
+- `atWarning()` - Warnings
+- `atInfo()` - Information
+- `atFine()` / `atFiner()` / `atFinest()` - Debug levels
+
+### Configuration
+```java
+logger.setLevel(Level.FINE);        // Set minimum log level
+Level level = logger.getLevel();    // Get current level
+HytaleLogger sub = logger.getSubLogger("subsystem");  // Create sub-logger
+```
+
+### Usage Example
+```java
+@Override
+protected void setup() {
+    getLogger().atInfo().log("Plugin setup starting...");
+
+    try {
+        // Initialize something
+        getLogger().atFine().log("Initialized feature X");
+    } catch (Exception e) {
+        getLogger().atSevere().withCause(e).log("Failed to initialize");
+    }
+
+    getLogger().atInfo().log("Plugin setup complete!");
+}
+```
+
 ## Usage Example
 ```java
 package com.example.myplugin;
@@ -125,7 +271,25 @@ Events related to server lifecycle.
 |-------|-------------|
 | `BootEvent` | Server boot has completed |
 | `ShutdownEvent` | Server is shutting down |
-| `PrepareUniverseEvent` | Universe preparation phase |
+| `PrepareUniverseEvent` | Universe preparation phase (configure worlds) |
+
+---
+
+### PrepareUniverseEvent
+
+Fired during universe preparation, before worlds are loaded. Allows plugins to configure or modify world settings.
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `getWorldConfigProvider()` | `WorldConfigProvider` | Get the world configuration provider |
+| `setWorldConfigProvider(WorldConfigProvider)` | `void` | Set a custom world configuration provider |
+
+```java
+getEventRegistry().register(PrepareUniverseEvent.class, event -> {
+    var configProvider = event.getWorldConfigProvider();
+    getLogger().atInfo().log("Universe preparing with config: " + configProvider);
+});
+```
 
 ### Usage Example
 

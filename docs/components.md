@@ -164,6 +164,230 @@ See [Events API - ECS Events](events.md#ecs-events-entityeventsystem) for usage 
 
 ---
 
+### Query<ECS_TYPE>
+**Package:** `com.hypixel.hytale.component.query`
+
+Interface for filtering entities by their component composition. Used with `Store.forEachChunk()`, `Store.getEntityCountFor()`, and as the return type for `EntityEventSystem.getQuery()`.
+
+**Note:** `ComponentType` implements `Query`, so you can use a component type directly as a query.
+
+#### Static Factory Methods
+```java
+// Match any entity (no filtering)
+static <ECS_TYPE> AnyQuery<ECS_TYPE> any()
+
+// Match entities that do NOT match the given query
+static <ECS_TYPE> NotQuery<ECS_TYPE> not(Query<ECS_TYPE> query)
+
+// Match entities that match ALL given queries
+static <ECS_TYPE> AndQuery<ECS_TYPE> and(Query<ECS_TYPE>... queries)
+
+// Match entities that match ANY of the given queries
+static <ECS_TYPE> OrQuery<ECS_TYPE> or(Query<ECS_TYPE>... queries)
+```
+
+#### Methods
+```java
+// Test if an archetype matches this query
+boolean test(Archetype<ECS_TYPE> archetype)
+
+// Check if query requires a specific component type
+boolean requiresComponentType(ComponentType<ECS_TYPE, ?> type)
+
+// Validation
+void validateRegistry(ComponentRegistry<ECS_TYPE> registry)
+void validate()
+```
+
+#### Usage Examples
+```java
+// Simple query - match entities with Player component
+Query<EntityStore> playerQuery = Player.getComponentType();
+
+// Match any entity
+Query<EntityStore> allEntities = Query.any();
+
+// Match entities WITHOUT a component
+Query<EntityStore> nonPlayers = Query.not(Player.getComponentType());
+
+// Match entities with BOTH Player AND Health
+Query<EntityStore> playersWithHealth = Query.and(
+    Player.getComponentType(),
+    Health.getComponentType()
+);
+
+// Match entities with Player OR NPC
+Query<EntityStore> actors = Query.or(
+    Player.getComponentType(),
+    NPC.getComponentType()
+);
+
+// Combined query - entities with Player but not Dead
+Query<EntityStore> alivePlayers = Query.and(
+    Player.getComponentType(),
+    Query.not(Dead.getComponentType())
+);
+
+// Use in EntityEventSystem
+public class MySystem extends EntityEventSystem<EntityStore, MyEvent> {
+    @Override
+    public Query<EntityStore> getQuery() {
+        return Query.and(
+            Player.getComponentType(),
+            SomeOtherComponent.getComponentType()
+        );
+    }
+}
+
+// Use with Store iteration
+store.forEachChunk(playerQuery, (chunk, buffer) -> {
+    // Process matching entities
+});
+
+// Count matching entities
+int count = store.getEntityCountFor(playerQuery);
+```
+
+---
+
+### CommandBuffer<ECS_TYPE>
+**Package:** `com.hypixel.hytale.component`
+
+Buffer for deferred entity/component operations during ECS system iteration. Implements `ComponentAccessor`. Used in `EntityEventSystem.handle()` and `EntityTickingSystem.tick()` to safely modify entities while iterating.
+
+Operations are queued and applied after the current iteration completes, avoiding concurrent modification issues.
+
+#### Read Operations (Immediate)
+```java
+// Get store reference
+Store<ECS_TYPE> getStore()
+
+// Get component (reads current state)
+<T extends Component<ECS_TYPE>> T getComponent(Ref<ECS_TYPE> ref, ComponentType<ECS_TYPE, T> type)
+
+// Get entity archetype
+Archetype<ECS_TYPE> getArchetype(Ref<ECS_TYPE> ref)
+
+// Get resource
+<T extends Resource<ECS_TYPE>> T getResource(ResourceType<ECS_TYPE, T> type)
+
+// Get external data
+ECS_TYPE getExternalData()
+```
+
+#### Deferred Entity Operations
+```java
+// Add entity from holder
+Ref<ECS_TYPE> addEntity(Holder<ECS_TYPE> holder, AddReason reason)
+
+// Add entity with pre-allocated ref
+Ref<ECS_TYPE> addEntity(Holder<ECS_TYPE> holder, Ref<ECS_TYPE> ref, AddReason reason)
+
+// Add multiple entities
+Ref<ECS_TYPE>[] addEntities(Holder<ECS_TYPE>[] holders, AddReason reason)
+void addEntities(Holder<ECS_TYPE>[] holders, int holderOffset,
+                 Ref<ECS_TYPE>[] refs, int refOffset, int count, AddReason reason)
+
+// Remove entity
+void removeEntity(Ref<ECS_TYPE> ref, RemoveReason reason)
+void tryRemoveEntity(Ref<ECS_TYPE> ref, RemoveReason reason)
+Holder<ECS_TYPE> removeEntity(Ref<ECS_TYPE> ref, Holder<ECS_TYPE> outHolder, RemoveReason reason)
+
+// Copy entity to holder
+Holder<ECS_TYPE> copyEntity(Ref<ECS_TYPE> ref, Holder<ECS_TYPE> outHolder)
+```
+
+#### Deferred Component Operations
+```java
+// Add component
+<T extends Component<ECS_TYPE>> T addComponent(Ref<ECS_TYPE> ref, ComponentType<ECS_TYPE, T> type)
+<T extends Component<ECS_TYPE>> void addComponent(Ref<ECS_TYPE> ref, ComponentType<ECS_TYPE, T> type, T component)
+
+// Ensure component exists
+<T extends Component<ECS_TYPE>> void ensureComponent(Ref<ECS_TYPE> ref, ComponentType<ECS_TYPE, T> type)
+<T extends Component<ECS_TYPE>> T ensureAndGetComponent(Ref<ECS_TYPE> ref, ComponentType<ECS_TYPE, T> type)
+
+// Replace/put component
+<T extends Component<ECS_TYPE>> void replaceComponent(Ref<ECS_TYPE> ref, ComponentType<ECS_TYPE, T> type, T component)
+<T extends Component<ECS_TYPE>> void putComponent(Ref<ECS_TYPE> ref, ComponentType<ECS_TYPE, T> type, T component)
+
+// Remove component
+<T extends Component<ECS_TYPE>> void removeComponent(Ref<ECS_TYPE> ref, ComponentType<ECS_TYPE, T> type)
+<T extends Component<ECS_TYPE>> void tryRemoveComponent(Ref<ECS_TYPE> ref, ComponentType<ECS_TYPE, T> type)
+```
+
+#### Event Invocation
+```java
+// Invoke event on specific entity
+<Event extends EcsEvent> void invoke(Ref<ECS_TYPE> ref, Event event)
+<Event extends EcsEvent> void invoke(EntityEventType<ECS_TYPE, Event> type, Ref<ECS_TYPE> ref, Event event)
+
+// Invoke world-level event
+<Event extends EcsEvent> void invoke(Event event)
+<Event extends EcsEvent> void invoke(WorldEventType<ECS_TYPE, Event> type, Event event)
+```
+
+#### Custom Operations
+```java
+// Queue arbitrary operation
+void run(Consumer<Store<ECS_TYPE>> consumer)
+```
+
+#### Parallel Processing
+```java
+// Create a fork for parallel work
+CommandBuffer<ECS_TYPE> fork()
+
+// Merge parallel buffer back
+void mergeParallel(CommandBuffer<ECS_TYPE> forkedBuffer)
+```
+
+#### Utility
+```java
+boolean setThread()
+void validateEmpty()
+```
+
+#### Usage Example
+```java
+public class MyEventSystem extends EntityEventSystem<EntityStore, MyEvent> {
+
+    @Override
+    public void handle(int index, ArchetypeChunk<EntityStore> chunk,
+                       Store<EntityStore> store, CommandBuffer<EntityStore> buffer,
+                       MyEvent event) {
+        Player player = chunk.getComponent(index, Player.getComponentType());
+
+        // Read component (immediate)
+        Health health = buffer.getComponent(ref, Health.getComponentType());
+
+        // Deferred: add component
+        buffer.addComponent(ref, MarkerComponent.getComponentType());
+
+        // Deferred: remove component
+        buffer.removeComponent(ref, OldComponent.getComponentType());
+
+        // Deferred: spawn new entity
+        Holder<EntityStore> holder = new Holder<>();
+        holder.addComponent(SomeComponent.getComponentType(), new SomeComponent());
+        buffer.addEntity(holder, AddReason.SPAWN);
+
+        // Deferred: arbitrary operation
+        buffer.run(s -> {
+            // Operations on store after iteration
+            s.getResource(MyResource.getResourceType()).incrementCounter();
+        });
+    }
+
+    @Override
+    public Query<EntityStore> getQuery() {
+        return Player.getComponentType();
+    }
+}
+```
+
+---
+
 ## Blueprint and Composition Types
 
 ### Holder<ECS_TYPE>
@@ -290,8 +514,181 @@ Mark components that should not participate in ticking systems.
 
 ## Common Store Types
 
-- `Store<EntityStore>` - Entity components (Player, PlayerRef, etc.)
-- `Store<ChunkStore>` - Chunk components
+The ECS system uses two primary store types:
+- `Store<EntityStore>` - Entity components (Player, PlayerRef, TransformComponent, etc.)
+- `Store<ChunkStore>` - Chunk components (WorldChunk, block data, etc.)
+
+---
+
+## EntityStore
+**Package:** `com.hypixel.hytale.server.core.universe.world.storage`
+
+The ECS type parameter for entity components. Provides access to entity references and the component registry.
+
+### Static Fields
+```java
+static final ComponentRegistry<EntityStore> REGISTRY  // Component registry for entities
+```
+
+### Methods
+```java
+Store<EntityStore> getStore()                    // Get the entity store
+Ref<EntityStore> getRefFromUUID(UUID uuid)       // Get entity ref by UUID
+Ref<EntityStore> getRefFromNetworkId(int id)     // Get entity ref by network ID
+int takeNextNetworkId()                          // Allocate next network ID
+World getWorld()                                 // Get the world
+```
+
+### Usage
+```java
+// In a command or system, you receive Store<EntityStore>
+Store<EntityStore> store = ...;
+
+// Get component from entity
+Player player = store.getComponent(ref, Player.getComponentType());
+
+// Find entity by UUID
+Ref<EntityStore> entityRef = entityStore.getRefFromUUID(uuid);
+```
+
+---
+
+## ChunkStore
+**Package:** `com.hypixel.hytale.server.core.universe.world.storage`
+
+The ECS type parameter for chunk components. Provides access to chunk references and loading.
+
+### Static Fields
+```java
+static final ComponentRegistry<ChunkStore> REGISTRY  // Component registry for chunks
+```
+
+### Methods
+```java
+Store<ChunkStore> getStore()                     // Get the chunk store
+World getWorld()                                 // Get the world
+
+// Chunk access
+Ref<ChunkStore> getChunkReference(long index)    // Get chunk ref by packed index
+Ref<ChunkStore> getChunkSectionReference(int x, int y, int z)  // Get chunk by coordinates
+
+// Async chunk access
+CompletableFuture<Ref<ChunkStore>> getChunkSectionReferenceAsync(int x, int y, int z)
+CompletableFuture<Ref<ChunkStore>> getChunkReferenceAsync(long index)
+
+// Get component directly
+<T> T getChunkComponent(long index, ComponentType<ChunkStore, T> type)
+
+// Statistics
+int getLoadedChunksCount()
+int getTotalGeneratedChunksCount()
+int getTotalLoadedChunksCount()
+```
+
+---
+
+## ComponentRegistry<ECS_TYPE>
+**Package:** `com.hypixel.hytale.component`
+
+Registry for components, resources, systems, and event types. Access via `EntityStore.REGISTRY` or `ChunkStore.REGISTRY`.
+
+### Component Registration
+```java
+<T> ComponentType<ECS_TYPE, T> registerComponent(Class<? super T> clazz, Supplier<T> supplier)
+<T> ComponentType<ECS_TYPE, T> registerComponent(Class<? super T> clazz, String name, BuilderCodec<T> codec)
+<T> void unregisterComponent(ComponentType<ECS_TYPE, T> type)
+<T> T createComponent(ComponentType<ECS_TYPE, T> type)
+```
+
+### Resource Registration
+```java
+<T> ResourceType<ECS_TYPE, T> registerResource(Class<? super T> clazz, Supplier<T> supplier)
+<T> ResourceType<ECS_TYPE, T> registerResource(Class<? super T> clazz, String name, BuilderCodec<T> codec)
+<T> void unregisterResource(ResourceType<ECS_TYPE, T> type)
+```
+
+### System Registration
+```java
+void registerSystem(ISystem<ECS_TYPE> system)
+void registerSystem(ISystem<ECS_TYPE> system, boolean enabled)
+void unregisterSystem(Class<? extends ISystem<ECS_TYPE>> systemClass)
+SystemGroup<ECS_TYPE> registerSystemGroup()
+void unregisterSystemGroup(SystemGroup<ECS_TYPE> group)
+```
+
+### Event Type Registration
+```java
+<T> EntityEventType<ECS_TYPE, T> registerEntityEventType(Class<? super T> eventClass)
+<T> WorldEventType<ECS_TYPE, T> registerWorldEventType(Class<? super T> eventClass)
+<T> void unregisterEntityEventType(EntityEventType<ECS_TYPE, T> type)
+<T> void unregisterWorldEventType(WorldEventType<ECS_TYPE, T> type)
+```
+
+### Holder Creation
+```java
+Holder<ECS_TYPE> newHolder()
+Holder<ECS_TYPE> newHolder(Archetype<ECS_TYPE> archetype, Component<ECS_TYPE>[] components)
+```
+
+### Query Methods
+```java
+boolean hasSystem(ISystem<ECS_TYPE> system)
+<T> boolean hasSystemClass(Class<T> systemClass)
+<T> EntityEventType<ECS_TYPE, T> getEntityEventTypeForClass(Class<T> eventClass)
+<T> WorldEventType<ECS_TYPE, T> getWorldEventTypeForClass(Class<T> eventClass)
+```
+
+---
+
+## TransformComponent
+**Package:** `com.hypixel.hytale.server.core.modules.entity.component`
+
+Component storing entity position and rotation. Present on all positioned entities.
+
+### Getting the Component
+```java
+TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+```
+
+### Position Methods
+```java
+Vector3d getPosition()
+void setPosition(Vector3d position)
+void teleportPosition(Vector3d position)  // Teleport (bypasses interpolation)
+```
+
+### Rotation Methods
+```java
+Vector3f getRotation()
+void setRotation(Vector3f rotation)
+void teleportRotation(Vector3f rotation)  // Teleport rotation
+```
+
+### Transform Access
+```java
+Transform getTransform()  // Get combined position/rotation
+```
+
+### Chunk Access
+```java
+WorldChunk getChunk()                // Get current chunk
+Ref<ChunkStore> getChunkRef()        // Get chunk reference
+void setChunkLocation(Ref<ChunkStore> ref, WorldChunk chunk)
+void markChunkDirty(ComponentAccessor<EntityStore> accessor)
+```
+
+### Usage Example
+```java
+// Get entity position
+TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+if (transform != null) {
+    Vector3d pos = transform.getPosition();
+    Vector3f rot = transform.getRotation();
+
+    // Teleport entity
+    transform.teleportPosition(new Vector3d(100, 64, 100));
+}
+```
 
 ---
 

@@ -221,6 +221,21 @@ void onBounce(
 
 ---
 
+## BallisticDataProvider
+**Package:** `com.hypixel.hytale.server.core.modules.projectile.config`
+
+Interface for types that provide ballistic data.
+
+### Method
+```java
+BallisticData getBallisticData()  // Get the ballistic properties
+```
+
+### Implementations
+- `ProjectileInteraction` - Provides ballistic data from its config
+
+---
+
 ## Projectile Component
 **Package:** `com.hypixel.hytale.server.core.modules.projectile.component`
 
@@ -232,6 +247,202 @@ ECS component marking an entity as a projectile.
 ```java
 ComponentType<EntityStore, Projectile> type = Projectile.getComponentType();
 Projectile projectile = store.getComponent(ref, type);
+```
+
+---
+
+## PredictedProjectile
+**Package:** `com.hypixel.hytale.server.core.modules.projectile.component`
+
+ECS component for client-side projectile prediction. Links a predicted projectile to its UUID.
+
+**Implements:** `Component<EntityStore>`
+
+### Getting the Component
+```java
+ComponentType<EntityStore, PredictedProjectile> type = PredictedProjectile.getComponentType();
+// Or via ProjectileModule
+ComponentType<EntityStore, PredictedProjectile> type =
+    ProjectileModule.get().getPredictedProjectileComponentType();
+```
+
+### Methods
+```java
+// Constructor
+PredictedProjectile(UUID uuid)
+
+// Get the prediction UUID
+UUID getUuid()
+
+// Clone for ECS
+Component<EntityStore> clone()
+```
+
+### Usage Example
+```java
+// Check if a projectile has prediction
+PredictedProjectile predicted = store.getComponent(ref, PredictedProjectile.getComponentType());
+if (predicted != null) {
+    UUID predictionId = predicted.getUuid();
+    // This projectile is being predicted on the client
+}
+```
+
+---
+
+## StandardPhysicsProvider
+**Package:** `com.hypixel.hytale.server.core.modules.projectile.config`
+
+ECS component that provides physics simulation for projectiles. Handles collision, bouncing, rolling, and fluid interaction.
+
+**Implements:** `Component<EntityStore>`, `IBlockCollisionConsumer`
+
+### Getting the Component
+```java
+ComponentType<EntityStore, StandardPhysicsProvider> type = StandardPhysicsProvider.getComponentType();
+// Or via ProjectileModule
+ComponentType<EntityStore, StandardPhysicsProvider> type =
+    ProjectileModule.get().getStandardPhysicsProviderComponentType();
+```
+
+### Constants
+```java
+static final int WATER_DETECTION_EXTREMA_COUNT;  // Samples for water detection
+static final double MIN_BOUNCE_EPSILON;          // Minimum bounce velocity
+static final double MIN_BOUNCE_EPSILON_SQUARED;  // Squared minimum
+```
+
+### State Enum
+```java
+StandardPhysicsProvider.STATE getState()
+void setState(StandardPhysicsProvider.STATE state)
+```
+
+### Physics Configuration
+```java
+StandardPhysicsConfig getPhysicsConfig()
+```
+
+### Position and Movement
+```java
+Vector3d getPosition()
+Vector3d getVelocity()
+Vector3d getMovement()           // Current tick movement
+Vector3d getNextMovement()       // Next tick planned movement
+```
+
+### Ground and Fluid State
+```java
+boolean isOnGround()
+void setOnGround(boolean onGround)
+boolean isSwimming()
+boolean isInFluid()
+void setInFluid(boolean inFluid)
+double getDragCoefficient(double value)
+```
+
+### Bounce Tracking
+```java
+boolean isBounced()
+void setBounced(boolean bounced)
+int getBounces()
+void incrementBounces()
+```
+
+### Collision Data
+```java
+double getCollisionStart()
+void setCollisionStart(double start)
+Vector3d getContactPosition()
+Vector3d getContactNormal()
+boolean isSliding()
+void setSliding(boolean sliding)
+```
+
+### Fluid Interaction
+```java
+double getDisplacedMass()
+void setDisplacedMass(double mass)
+double getSubSurfaceVolume()
+void setSubSurfaceVolume(double volume)
+double getEnterFluid()
+void setEnterFluid(double value)
+double getLeaveFluid()
+void setLeaveFluid(double value)
+```
+
+### Collision Providers
+```java
+BlockCollisionProvider getBlockCollisionProvider()
+EntityRefCollisionProvider getEntityCollisionProvider()
+BlockTracker getTriggerTracker()
+BlockTracker getFluidTracker()
+```
+
+### Physics State
+```java
+ForceProviderEntity getForceProviderEntity()
+ForceProvider[] getForceProviders()
+ForceProviderStandardState getForceProviderStandardState()
+PhysicsBodyStateUpdater getStateUpdater()
+PhysicsBodyState getStateBefore()
+PhysicsBodyState getStateAfter()
+RestingSupport getRestingSupport()
+```
+
+### Callbacks
+```java
+ImpactConsumer getImpactConsumer()
+BounceConsumer getBounceConsumer()
+```
+
+### World and Entity
+```java
+void setWorld(World world)
+UUID getCreatorUuid()
+boolean isProvidesCharacterCollisions()
+```
+
+### Collision Handling (IBlockCollisionConsumer)
+```java
+Result onCollision(int x, int y, int z, Vector3d velocity, BlockContactData contact,
+                   BlockData block, Box box)
+Result probeCollisionDamage(int x, int y, int z, Vector3d velocity,
+                            BlockContactData contact, BlockData block)
+void onCollisionDamage(int x, int y, int z, Vector3d velocity,
+                       BlockContactData contact, BlockData block)
+Result onCollisionSliceFinished()
+void onCollisionFinished()
+```
+
+### Tick Methods
+```java
+void finishTick(TransformComponent transform, Velocity velocity)
+void rotateBody(double angle, Vector3f axis)
+```
+
+### Usage Example
+```java
+// Get physics provider from a projectile
+StandardPhysicsProvider physics = store.getComponent(ref,
+    StandardPhysicsProvider.getComponentType());
+
+if (physics != null) {
+    // Check state
+    if (physics.isOnGround()) {
+        // Projectile has landed
+    }
+
+    // Check bounces
+    int bounceCount = physics.getBounces();
+    StandardPhysicsConfig config = physics.getPhysicsConfig();
+    if (bounceCount >= config.getBounceCount()) {
+        // Max bounces reached
+    }
+
+    // Get velocity
+    Vector3d vel = physics.getVelocity();
+}
 ```
 
 ---

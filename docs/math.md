@@ -332,6 +332,96 @@ Vector3l longVec = intVec.toVector3l();
 
 ---
 
+## Vector3l
+
+**Package:** `com.hypixel.hytale.math.vector`
+
+Long-precision 3D vector. Similar API to Vector3i but with `long` components. Useful for large coordinate values.
+
+### Constants
+
+```java
+Vector3l.ZERO
+Vector3l.UP, Vector3l.DOWN        // Y axis (aliases: POS_Y, NEG_Y)
+Vector3l.FORWARD, Vector3l.BACKWARD  // Z axis (aliases: NEG_Z, POS_Z)
+Vector3l.RIGHT, Vector3l.LEFT     // X axis (aliases: POS_X, NEG_X)
+Vector3l.NORTH, Vector3l.SOUTH    // Z axis aliases
+Vector3l.EAST, Vector3l.WEST      // X axis aliases
+Vector3l.ALL_ONES
+Vector3l.MIN, Vector3l.MAX        // Long min/max values
+```
+
+### Direction Arrays
+
+```java
+Vector3l[] BLOCK_SIDES       // 6 face directions
+Vector3l[] BLOCK_EDGES       // 12 edge directions
+Vector3l[] BLOCK_CORNERS     // 8 corner directions
+Vector3l[][] BLOCK_PARTS     // All block parts
+Vector3l[] CARDINAL_DIRECTIONS  // 4 horizontal directions
+```
+
+### Instance Methods
+
+Same pattern as Vector3i but with long types:
+
+```java
+long x = vec.getX();
+long y = vec.getY();
+long z = vec.getZ();
+
+vec.setX(10L);
+vec.setY(64L);
+vec.setZ(-5L);
+
+vec.assign(x, y, z);
+vec.assign(other);
+
+vec.add(x, y, z);
+vec.add(other);
+vec.addScaled(dir, scale);
+
+vec.subtract(x, y, z);
+vec.subtract(other);
+
+vec.scale(factor);     // long
+vec.scale(factor);     // double (truncates)
+vec.scale(other);      // Component-wise
+vec.negate();
+
+double len = vec.length();
+long lenSq = vec.squaredLength();
+
+vec.normalize();
+vec.setLength(len);
+vec.clampLength(max);
+
+long dot = vec.dot(other);
+vec.cross(other);
+
+double dist = vec.distanceTo(other);
+long distSq = vec.distanceSquaredTo(other);
+```
+
+### Conversion
+
+```java
+Vector3i intVec = longVec.toVector3i();
+Vector3d doubleVec = longVec.toVector3d();
+```
+
+### Static Methods
+
+```java
+Vector3l sum = Vector3l.add(a, b);
+Vector3l sum = Vector3l.add(a, b, result);
+Vector3l dir = Vector3l.directionTo(from, to);
+Vector3l lower = Vector3l.min(a, b);
+Vector3l upper = Vector3l.max(a, b);
+```
+
+---
+
 ## Transform
 
 **Package:** `com.hypixel.hytale.math.vector`
@@ -638,6 +728,86 @@ matrix.viewDirection(eyeX, eyeY, eyeZ, dirX, dirY, dirZ, upX, upY, upZ);
 ```java
 double[] data = matrix.getData();      // 16-element double array
 float[] floatData = matrix.asFloatData(); // 16-element float array
+```
+
+---
+
+## Vector4d
+
+**Package:** `com.hypixel.hytale.math.vector`
+
+4D double vector for homogeneous coordinates. Used with `Matrix4d` for 4D transformations and perspective projection.
+
+In homogeneous coordinates:
+- **w = 1**: Represents a position (affected by translation)
+- **w = 0**: Represents a direction (not affected by translation)
+
+### Fields
+
+```java
+double x, y, z, w
+```
+
+### Component Constants
+
+```java
+Vector4d.COMPONENT_X  // 0
+Vector4d.COMPONENT_Y  // 1
+Vector4d.COMPONENT_Z  // 2
+Vector4d.COMPONENT_W  // 3
+```
+
+### Constructors
+
+```java
+Vector4d vec = new Vector4d();                    // All zeros
+Vector4d vec = new Vector4d(x, y, z, w);
+```
+
+### Static Factory Methods
+
+```java
+// Create position (w = 1)
+Vector4d pos = Vector4d.newPosition(x, y, z);
+Vector4d pos = Vector4d.newPosition(vec3d);
+
+// Create direction (w = 0)
+Vector4d dir = Vector4d.newDirection(x, y, z);
+```
+
+### Methods
+
+```java
+// Set w component
+Vector4d setPosition()   // Sets w = 1
+Vector4d setDirection()  // Sets w = 0
+
+// Assignment
+Vector4d assign(other)
+Vector4d assign(x, y, z, w)
+
+// Interpolation
+Vector4d lerp(other, t, result)
+
+// Component access
+double val = vec.get(Vector4d.COMPONENT_X);
+
+// Perspective projection
+void perspectiveTransform()  // Divide xyz by w
+boolean isInsideFrustum()    // Check if inside view frustum
+```
+
+### Usage with Matrix4d
+
+```java
+// Transform a 3D position through a 4x4 matrix
+Matrix4d matrix = ...;
+Vector4d pos = Vector4d.newPosition(x, y, z);
+Vector4d result = matrix.multiply(pos);
+
+// For perspective projection, divide by w
+result.perspectiveTransform();
+// Now result.x/y/z are in normalized device coordinates
 ```
 
 ---

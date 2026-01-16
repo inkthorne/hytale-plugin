@@ -152,6 +152,18 @@ public interface IEvent<KeyType> extends IBaseEvent<KeyType> {
 }
 ```
 
+### IAsyncEvent<KeyType>
+
+**Package:** `com.hypixel.hytale.event`
+
+Marker interface for async events. Extends `IBaseEvent`. Used with `registerAsync()` and `registerAsyncGlobal()` methods.
+
+```java
+public interface IAsyncEvent<KeyType> extends IBaseEvent<KeyType> {
+    // Marker interface for async events
+}
+```
+
 ### ICancellable
 
 **Package:** `com.hypixel.hytale.event`
@@ -210,10 +222,66 @@ public abstract class CancellableEcsEvent extends EcsEvent implements ICancellab
 IBaseEvent<KeyType>
 ├── IEvent<KeyType>           (keyed events registered via EventRegistry)
 │   └── ICancellable          (optional - for cancellable keyed events)
+├── IAsyncEvent<KeyType>      (async events registered via registerAsync*)
 │
 EcsEvent                      (ECS events handled by EntityEventSystem)
 └── CancellableEcsEvent       (cancellable ECS events)
     └── ICancellableEcsEvent  (interface)
+```
+
+---
+
+## EventRegistration<KeyType, EventType>
+
+**Package:** `com.hypixel.hytale.event`
+
+Handle returned by `EventRegistry.register*()` methods. Used to unregister event handlers or check registration status. Extends `Registration`.
+
+### Methods
+```java
+// Get the event class this registration handles
+Class<EventType> getEventClass()
+
+// Unregister this event handler (inherited from Registration)
+void unregister()
+
+// Check if still registered (inherited from Registration)
+boolean isRegistered()
+```
+
+### Static Methods
+```java
+// Combine multiple registrations into one (unregistering the combined
+// registration will unregister all)
+static <K, E> EventRegistration<K, E> combine(EventRegistration<K, E>... registrations)
+```
+
+### Usage Example
+```java
+// Store registration for later unregistration
+private EventRegistration<Void, PlayerConnectEvent> connectRegistration;
+
+@Override
+protected void setup() {
+    connectRegistration = getEventRegistry().register(PlayerConnectEvent.class, event -> {
+        event.getPlayerRef().sendMessage(Message.raw("Welcome!"));
+    });
+}
+
+// Later, to unregister:
+public void disableWelcomeMessage() {
+    if (connectRegistration != null && connectRegistration.isRegistered()) {
+        connectRegistration.unregister();
+    }
+}
+
+// Combine multiple registrations
+EventRegistration<Void, PlayerConnectEvent> reg1 = getEventRegistry().register(...);
+EventRegistration<Void, PlayerConnectEvent> reg2 = getEventRegistry().register(...);
+EventRegistration<Void, PlayerConnectEvent> combined = EventRegistration.combine(reg1, reg2);
+
+// Unregistering combined will unregister both
+combined.unregister();
 ```
 
 ---

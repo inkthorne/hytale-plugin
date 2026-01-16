@@ -50,17 +50,301 @@ public interface StateData {
 
 ---
 
-## Related Packages
+## BlockStateRegistration
+**Package:** `com.hypixel.hytale.server.core.universe.world.meta`
 
-### Block Types
-**Package:** `com.hypixel.hytale.server.core.blocktype`
+Registration handle returned by `registerBlockState()`. Extends `Registration`.
 
-Block type definitions and configurations.
+```java
+public class BlockStateRegistration extends Registration {
+    // Get the registered BlockState class
+    Class<? extends BlockState> getBlockStateClass()
+}
+```
 
-### Block Materials
+---
+
+## BlockType
+**Package:** `com.hypixel.hytale.server.core.asset.type.blocktype.config`
+
+Core class representing a block type configuration. Provides access to all block properties including material, textures, sounds, and behavior settings.
+
+### Constants
+```java
+static final BlockType EMPTY;      // Empty/air block
+static final BlockType UNKNOWN;    // Unknown block placeholder
+static final BlockType DEBUG_CUBE; // Debug cube block
+static final BlockType DEBUG_MODEL;// Debug model block
+
+static final String EMPTY_KEY;     // Key for empty block
+static final String UNKNOWN_KEY;   // Key for unknown block
+static final int EMPTY_ID;         // ID for empty block
+static final int UNKNOWN_ID;       // ID for unknown block
+```
+
+### Static Methods
+```java
+// Get block from string identifier
+static BlockType fromString(String id)
+
+// Access the block asset store
+static AssetStore<String, BlockType, ...> getAssetStore()
+static BlockTypeAssetMap<String, BlockType> getAssetMap()
+
+// Get unknown block for a specific key
+static BlockType getUnknownFor(String key)
+
+// Get block ID with fallback to unknown
+static int getBlockIdOrUnknown(String key, String context, Object... args)
+```
+
+### Core Properties
+```java
+String getId()                    // Block identifier
+String getGroup()                 // Block group/category
+boolean isUnknown()               // Check if this is an unknown block
+boolean isState()                 // Check if this is a block state
+Item getItem()                    // Get associated item (if any)
+```
+
+### Material & Rendering
+```java
+BlockMaterial getMaterial()       // Get block material (Empty/Solid)
+DrawType getDrawType()            // How the block is drawn
+Opacity getOpacity()              // Block opacity
+BlockFlags getFlags()             // Block flags (various properties)
+ColorLight getLight()             // Light emission
+```
+
+### Textures & Model
+```java
+BlockTypeTextures[] getTextures() // Block textures
+String getCustomModel()           // Custom model path (if any)
+float getCustomModelScale()       // Custom model scale
+String getCustomModelAnimation()  // Custom model animation
+CustomModelTexture[] getCustomModelTexture()
+```
+
+### Sounds & Particles
+```java
+String getBlockSoundSetId()       // Sound set identifier
+int getBlockSoundSetIndex()       // Sound set index
+ModelParticle[] getParticles()    // Particle effects
+String getBlockParticleSetId()    // Particle set identifier
+Color getParticleColor()          // Particle color
+String getBlockBreakingDecalId()  // Breaking decal texture
+```
+
+### Rotation & Placement
+```java
+Rotation getRotationYawPlacementOffset()    // Rotation offset when placed
+RandomRotation getRandomRotation()          // Random rotation settings
+VariantRotation getVariantRotation()        // Variant rotation settings
+BlockFlipType getFlipType()                 // Flip behavior
+BlockPlacementSettings getPlacementSettings()// Placement rules
+```
+
+### Collision & Interaction
+```java
+String getHitboxType()                      // Collision hitbox type
+int getHitboxTypeIndex()                    // Collision hitbox index
+String getInteractionHitboxType()           // Interaction hitbox type
+int getInteractionHitboxTypeIndex()         // Interaction hitbox index
+String getInteractionHint()                 // UI interaction hint
+boolean isTrigger()                         // Is this a trigger block
+int getDamageToEntities()                   // Damage dealt to entities
+Map<InteractionType, String> getInteractions()// Interaction mappings
+```
+
+### Block States
+```java
+BlockType getBlockForState(String state)    // Get block for named state
+String getBlockKeyForState(String state)    // Get block key for state
+String getDefaultStateKey()                 // Default state key
+String getStateForBlock(BlockType block)    // Get state name for block
+String getStateForBlock(String blockKey)    // Get state name for key
+StateData getState()                        // Get state data config
+```
+
+### Movement & Support
+```java
+BlockMovementSettings getMovementSettings() // Movement properties
+SupportDropType getSupportDropType()        // Support drop behavior
+int getMaxSupportDistance()                 // Max support distance
+boolean isFullySupportive()                 // Fully supports neighbors
+boolean hasSupport()                        // Has support requirements
+Map<BlockFace, RequiredBlockFaceSupport[]> getSupport(int rotation)
+Map<BlockFace, BlockFaceSupport[]> getSupporting(int rotation)
+```
+
+### Other Properties
+```java
+ConnectedBlockRuleSet getConnectedBlockRuleSet()
+RotatedMountPointsArray getSeats()          // Seat mount points
+RotatedMountPointsArray getBeds()           // Bed mount points
+TickProcedure getTickProcedure()            // Tick behavior
+ShaderType[] getEffect()                    // Shader effects
+Bench getBench()                            // Crafting bench data
+BlockGathering getGathering()               // Gathering/farming data
+FarmingData getFarming()                    // Farming configuration
+Holder<ChunkStore> getBlockEntity()         // Block entity template
+RailConfig getRailConfig(int rotation)      // Rail configuration
+boolean isDoor()                            // Is this a door block
+boolean canBePlacedAsDeco()                 // Can be deco placement
+void getBlockCenter(int rotation, Vector3d out)// Get block center
+```
+
+---
+
+## BlockMaterial
 **Package:** `com.hypixel.hytale.protocol`
 
-`BlockMaterial` - Material properties for blocks (hardness, sounds, etc.).
+Simple enum representing the physical material type of a block.
+
+```java
+public enum BlockMaterial {
+    Empty,  // No collision/air
+    Solid   // Solid block with collision
+}
+```
+
+### Methods
+```java
+int getValue()                              // Get numeric value
+static BlockMaterial fromValue(int value)   // Get from numeric value
+static BlockMaterial[] values()             // All values
+static BlockMaterial valueOf(String name)   // Get by name
+```
+
+---
+
+## Rotation
+**Package:** `com.hypixel.hytale.server.core.asset.type.blocktype.config`
+
+Enum representing 90-degree rotation increments around an axis.
+
+```java
+public enum Rotation {
+    None,       // 0 degrees
+    Ninety,     // 90 degrees
+    OneEighty,  // 180 degrees
+    TwoSeventy  // 270 degrees
+}
+```
+
+### Constants
+```java
+static final Rotation[] VALUES; // All rotation values
+static final Rotation[] NORMAL; // Normal rotations subset
+```
+
+### Methods
+```java
+int getDegrees()                 // Get rotation in degrees (0, 90, 180, 270)
+double getRadians()              // Get rotation in radians
+Axis getAxisOfAlignment()        // Get alignment axis
+Vector3i getAxisDirection()      // Get axis direction vector
+
+// Rotation operations
+Rotation flip()                  // Flip rotation
+Rotation flip(Axis axis)         // Flip around axis
+Rotation add(Rotation other)     // Add rotations
+Rotation subtract(Rotation other)// Subtract rotations
+
+// Vector rotation methods
+Vector3i rotateX(Vector3i v, Vector3i out)
+Vector3f rotateX(Vector3f v, Vector3f out)
+Vector3d rotateX(Vector3d v, Vector3d out)
+Vector3i rotateY(Vector3i v, Vector3i out)
+Vector3f rotateY(Vector3f v, Vector3f out)
+Vector3d rotateY(Vector3d v, Vector3d out)
+Vector3i rotateZ(Vector3i v, Vector3i out)
+Vector3f rotateZ(Vector3f v, Vector3f out)
+Vector3d rotateZ(Vector3d v, Vector3d out)
+Vector3i rotateYaw(Vector3i v, Vector3i out)
+Vector3f rotateYaw(Vector3f v, Vector3f out)
+Vector3i rotatePitch(Vector3i v, Vector3i out)
+Vector3f rotatePitch(Vector3f v, Vector3f out)
+
+// Static rotation methods
+static Rotation ofDegrees(int degrees)           // Get from degrees
+static Rotation closestOfDegrees(float degrees)  // Closest to degrees
+static Rotation add(Rotation a, Rotation b)      // Add two rotations
+static Vector3i rotate(Vector3i v, Rotation yaw, Rotation pitch)
+static Vector3i rotate(Vector3i v, Rotation yaw, Rotation pitch, Rotation roll)
+static Vector3f rotate(Vector3f v, Rotation yaw, Rotation pitch, Rotation roll)
+static Vector3d rotate(Vector3d v, Rotation yaw, Rotation pitch, Rotation roll)
+```
+
+---
+
+## RotationTuple
+**Package:** `com.hypixel.hytale.server.core.asset.type.blocktype.config`
+
+Java record combining yaw, pitch, and roll rotations. Used for block placement rotation (see `PlaceBlockEvent.getRotation()`).
+
+```java
+public record RotationTuple(int index, Rotation yaw, Rotation pitch, Rotation roll) {
+}
+```
+
+### Constants
+```java
+static final RotationTuple NONE;       // No rotation (all None)
+static final int NONE_INDEX;           // Index of NONE
+static final RotationTuple[] VALUES;   // All possible rotation tuples
+```
+
+### Factory Methods
+```java
+// Create from components
+static RotationTuple of(Rotation yaw, Rotation pitch, Rotation roll)
+static RotationTuple of(Rotation yaw, Rotation pitch)  // roll = None
+
+// Get by index
+static RotationTuple get(int index)
+
+// Compute index from components
+static int index(Rotation yaw, Rotation pitch, Rotation roll)
+```
+
+### Record Components (Accessors)
+```java
+int index()        // Pre-computed index
+Rotation yaw()     // Yaw rotation
+Rotation pitch()   // Pitch rotation
+Rotation roll()    // Roll rotation
+```
+
+### Methods
+```java
+// Apply rotation to vector
+Vector3d rotate(Vector3d v)
+
+// Get rotation from array
+static RotationTuple getRotation(RotationTuple[] rotations,
+                                  RotationTuple tuple, Rotation yaw)
+```
+
+### Usage Example
+```java
+// In a PlaceBlockEvent handler
+PlaceBlockEvent event = ...;
+RotationTuple rotation = event.getRotation();
+
+// Access individual components
+Rotation yaw = rotation.yaw();
+Rotation pitch = rotation.pitch();
+Rotation roll = rotation.roll();
+
+// Modify rotation
+RotationTuple newRotation = RotationTuple.of(
+    Rotation.Ninety,
+    Rotation.None,
+    Rotation.None
+);
+event.setRotation(newRotation);
+```
 
 ---
 

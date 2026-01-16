@@ -19,6 +19,7 @@ Handle damage events when entities receive damage. Extend `DamageEventSystem` (n
 | `Damage.EnvironmentSource` | Source for environmental damage (fall, drowning) |
 | `Damage.ProjectileSource` | Source for projectile damage (arrows) |
 | `Damage.CommandSource` | Source for damage from commands |
+| `DamageCause` | Asset type for damage cause (FALL, DROWNING, PHYSICAL, etc.) |
 | `DamageDataComponent` | Component on entities that can receive damage |
 
 ---
@@ -80,6 +81,55 @@ Source for projectile damage (arrows, thrown items).
 ### Damage.CommandSource
 
 Source for damage inflicted via commands.
+
+---
+
+## DamageCause
+
+**Package:** `com.hypixel.hytale.server.core.modules.entity.damage`
+
+Asset type representing the cause/type of damage. Returned by `Damage.getCause()`.
+
+### Predefined Constants
+```java
+static DamageCause PHYSICAL       // Melee/physical attacks
+static DamageCause PROJECTILE     // Arrow/thrown item damage
+static DamageCause COMMAND        // Damage from commands
+static DamageCause DROWNING       // Underwater suffocation
+static DamageCause ENVIRONMENT    // Environmental hazards (lava, etc.)
+static DamageCause FALL           // Fall damage
+static DamageCause OUT_OF_WORLD   // Void damage
+static DamageCause SUFFOCATION    // Block suffocation
+```
+
+### Methods
+```java
+String getId()
+String getInherits()              // Parent cause for inheritance
+String getAnimationId()           // Animation to play on damage
+String getDeathAnimationId()      // Animation to play on death
+boolean isDurabilityLoss()        // Does this cause item durability loss?
+boolean isStaminaLoss()           // Does this cause stamina loss?
+boolean doesBypassResistances()   // Does this ignore damage resistances?
+```
+
+### Usage Example
+```java
+@Override
+public void handle(int index, ArchetypeChunk<EntityStore> chunk,
+                   Store<EntityStore> store, CommandBuffer<EntityStore> buffer,
+                   Damage event) {
+    DamageCause cause = event.getCause();
+
+    if (cause == DamageCause.FALL) {
+        // Handle fall damage specially
+        event.setCancelled(true);  // No fall damage
+    } else if (cause == DamageCause.DROWNING) {
+        // Reduce drowning damage
+        System.out.println("Drowning damage: " + event.getAmount());
+    }
+}
+```
 
 ---
 

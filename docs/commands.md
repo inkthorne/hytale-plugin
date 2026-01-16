@@ -7,6 +7,17 @@ AbstractCommand
         ├── AbstractPlayerCommand  (use this for player commands)
         ├── AbstractWorldCommand
         └── AbstractTargetPlayerCommand
+
+CommandSender (interface)
+  └── Player (implementation)
+
+CommandOwner (interface)
+  └── PluginBase (implementation)
+
+ArgumentType<D> (abstract)
+  └── SingleArgumentType<D>
+
+ArgTypes (factory for built-in argument types)
 ```
 
 ## AbstractPlayerCommand
@@ -217,3 +228,205 @@ public class KickCommand extends AbstractTargetPlayerCommand {
     }
 }
 ```
+
+---
+
+## CommandSender
+**Package:** `com.hypixel.hytale.server.core.command.system`
+
+Interface for anything that can send commands and receive messages.
+
+**Extends:** `IMessageReceiver`, `PermissionHolder`
+
+### Methods
+```java
+String getDisplayName()  // Display name of sender
+UUID getUuid()           // UUID of sender
+```
+
+### Implementations
+- `Player` - Player entities implement CommandSender
+- Console sender for server commands
+
+### Usage
+```java
+CommandSender sender = ctx.sender();
+sender.sendMessage(Message.raw("Hello!"));
+
+if (ctx.isPlayer()) {
+    Player player = ctx.senderAs(Player.class);
+}
+```
+
+---
+
+## CommandOwner
+**Package:** `com.hypixel.hytale.server.core.command.system`
+
+Interface for command owners (typically plugins).
+
+### Methods
+```java
+String getName()  // Name of the owner
+```
+
+### Implementations
+- `PluginBase` - All plugins implement CommandOwner
+
+### Usage
+```java
+// In AbstractCommand
+void setOwner(CommandOwner owner)
+```
+
+---
+
+## CommandRegistration
+**Package:** `com.hypixel.hytale.server.core.command.system`
+
+Result of registering a command with the server. Extends `Registration`.
+
+### Usage
+```java
+CommandRegistration registration = getCommandRegistry().registerCommand(new MyCommand());
+// Registration can be used to unregister the command later
+```
+
+---
+
+## ArgumentType<D>
+**Package:** `com.hypixel.hytale.server.core.command.system.arguments.types`
+
+Abstract base class for command argument types. Extend this to create custom argument types.
+
+### Key Methods
+```java
+abstract D parse(String[] input, ParseResult result)  // Parse input to value
+void suggest(CommandSender sender, String input, int cursor, SuggestionResult result)
+Message getArgumentUsage()   // Usage text for help
+Message getName()            // Argument name
+String[] getExamples()       // Example values
+int getNumberOfParameters()  // Number of input tokens consumed
+boolean isListArgument()     // Whether this accepts multiple values
+```
+
+### SingleArgumentType<D>
+Base class for arguments that consume a single input token:
+
+```java
+abstract D parse(String input, ParseResult result)  // Parse single string
+```
+
+---
+
+## ArgTypes
+**Package:** `com.hypixel.hytale.server.core.command.system.arguments.types`
+
+Factory class containing built-in argument types.
+
+### Primitive Types
+```java
+ArgTypes.BOOLEAN   // Boolean (true/false)
+ArgTypes.INTEGER   // Integer
+ArgTypes.FLOAT     // Float
+ArgTypes.DOUBLE    // Double
+ArgTypes.STRING    // String
+ArgTypes.UUID      // UUID
+ArgTypes.COLOR     // Color (integer)
+```
+
+### Player & Entity Types
+```java
+ArgTypes.PLAYER_UUID  // Player UUID with suggestions
+ArgTypes.PLAYER_REF   // PlayerRef with tab completion
+ArgTypes.ENTITY_ID    // Entity UUID
+```
+
+### World & Position Types
+```java
+ArgTypes.WORLD                    // World reference
+ArgTypes.RELATIVE_POSITION        // Double position with ~ support (e.g., ~10 ~ ~-5)
+ArgTypes.RELATIVE_BLOCK_POSITION  // Integer position with ~ support
+ArgTypes.RELATIVE_CHUNK_POSITION  // Chunk position with ~ support
+ArgTypes.VECTOR3I                 // Vector3i (x y z integers)
+ArgTypes.VECTOR2I                 // Vector2i (x y integers)
+ArgTypes.ROTATION                 // Vector3f rotation
+ArgTypes.RELATIVE_INTEGER         // Integer with ~ support
+ArgTypes.RELATIVE_FLOAT           // Float with ~ support
+```
+
+### Asset Types
+```java
+ArgTypes.BLOCK_TYPE_ASSET   // BlockType asset
+ArgTypes.ITEM_ASSET         // Item asset
+ArgTypes.MODEL_ASSET        // Model asset
+ArgTypes.WEATHER_ASSET      // Weather asset
+ArgTypes.EFFECT_ASSET       // EntityEffect asset
+ArgTypes.ENVIRONMENT_ASSET  // Environment asset
+ArgTypes.SOUND_EVENT_ASSET  // Sound event asset
+ArgTypes.PARTICLE_SYSTEM    // Particle system asset
+```
+
+### Game Types
+```java
+ArgTypes.GAME_MODE      // GameMode enum
+ArgTypes.SOUND_CATEGORY // Sound category
+ArgTypes.TICK_RATE      // Tick rate integer
+```
+
+### Block Types
+```java
+ArgTypes.BLOCK_TYPE_KEY    // Block type string key
+ArgTypes.BLOCK_ID          // Block ID integer
+ArgTypes.BLOCK_PATTERN     // Block pattern for commands
+ArgTypes.BLOCK_MASK        // Block mask for filtering
+ArgTypes.WEIGHTED_BLOCK_TYPE // Block type with weight
+```
+
+### Enum Helper
+```java
+// Create argument type for any enum
+ArgTypes.forEnum(String name, Class<E> enumClass)
+```
+
+### Usage Example
+```java
+public class TeleportCommand extends AbstractPlayerCommand {
+    private final Argument<RelativeDoublePosition, RelativeDoublePosition> posArg;
+
+    public TeleportCommand() {
+        super("tp", "Teleport to a position");
+        posArg = withRequiredArg("position", "Target position", ArgTypes.RELATIVE_POSITION);
+    }
+
+    @Override
+    protected void execute(CommandContext ctx, Store<EntityStore> store,
+                          Ref<EntityStore> ref, PlayerRef playerRef, World world) {
+        RelativeDoublePosition relPos = ctx.get(posArg);
+        Transform current = playerRef.getTransform();
+        Vector3d target = relPos.resolve(current.getPosition());
+        // Teleport to target
+    }
+}
+```
+
+### Custom Enum Argument Example
+```java
+public enum Difficulty { EASY, NORMAL, HARD }
+
+public class DifficultyCommand extends AbstractPlayerCommand {
+    private final Argument<Difficulty, Difficulty> diffArg;
+
+    public DifficultyCommand() {
+        super("difficulty", "Set difficulty");
+        diffArg = withRequiredArg("level", "Difficulty level",
+            ArgTypes.forEnum("difficulty", Difficulty.class));
+    }
+
+    @Override
+    protected void execute(CommandContext ctx, Store<EntityStore> store,
+                          Ref<EntityStore> ref, PlayerRef playerRef, World world) {
+        Difficulty diff = ctx.get(diffArg);
+        playerRef.sendMessage(Message.raw("Set difficulty to " + diff));
+    }
+}

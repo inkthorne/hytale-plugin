@@ -147,6 +147,58 @@ Container for UI event data passed to handlers.
 
 ---
 
+## CustomUIEventBindingType
+**Package:** `com.hypixel.hytale.protocol.packets.interface_`
+
+Enum defining UI event types for event bindings.
+
+### Values
+
+| Value | Description |
+|-------|-------------|
+| `Activating` | Element activated (clicked/pressed) |
+| `RightClicking` | Right mouse button clicked |
+| `DoubleClicking` | Double click |
+| `MouseEntered` | Mouse entered element bounds |
+| `MouseExited` | Mouse exited element bounds |
+| `ValueChanged` | Input value changed |
+| `ElementReordered` | Element order changed (drag/drop) |
+| `Validating` | Input validation triggered |
+| `Dismissing` | Element being dismissed |
+| `FocusGained` | Element gained focus |
+| `FocusLost` | Element lost focus |
+| `KeyDown` | Key pressed while focused |
+| `MouseButtonReleased` | Mouse button released |
+| `SlotClicking` | Inventory slot clicked |
+| `SlotDoubleClicking` | Inventory slot double-clicked |
+| `SlotMouseEntered` | Mouse entered slot |
+| `SlotMouseExited` | Mouse exited slot |
+| `DragCancelled` | Drag operation cancelled |
+| `Dropped` | Item dropped |
+| `SlotMouseDragCompleted` | Slot drag completed |
+| `SlotMouseDragExited` | Mouse exited during slot drag |
+| `SlotClickReleaseWhileDragging` | Click released while dragging |
+| `SlotClickPressWhileDragging` | Click pressed while dragging |
+| `SelectedTabChanged` | Tab selection changed |
+
+### Methods
+```java
+static CustomUIEventBindingType[] values()
+static CustomUIEventBindingType valueOf(String name)
+int getValue()
+static CustomUIEventBindingType fromValue(int value)
+```
+
+### Usage Example
+```java
+UIEventBuilder events = new UIEventBuilder();
+events.addEventBinding(CustomUIEventBindingType.Activating, "submit-button");
+events.addEventBinding(CustomUIEventBindingType.ValueChanged, "search-input");
+events.addEventBinding(CustomUIEventBindingType.SlotClicking, "inventory-slot");
+```
+
+---
+
 ## Player UI Managers
 
 Access via `Player`:
@@ -191,6 +243,107 @@ void validateWindows()
 
 ---
 
+### Window
+**Package:** `com.hypixel.hytale.server.core.entity.entities.player.windows`
+
+Abstract base class for player windows (inventory, crafting, container UIs).
+
+```java
+// Constructor
+Window(WindowType type)
+
+// Initialization (called by framework)
+void init(PlayerRef playerRef, WindowManager windowManager)
+
+// Abstract - must implement
+abstract JsonObject getData()  // Window data for client
+
+// Event handling
+void handleAction(Ref<EntityStore> ref, Store<EntityStore> store, WindowAction action)
+
+// Properties
+WindowType getType()
+int getId()
+void setId(int id)
+PlayerRef getPlayerRef()
+
+// Lifecycle
+void close()
+
+// Close event registration
+EventRegistration registerCloseEvent(Consumer<Window.WindowCloseEvent> handler)
+EventRegistration registerCloseEvent(short priority, Consumer<Window.WindowCloseEvent> handler)
+EventRegistration registerCloseEvent(EventPriority priority, Consumer<Window.WindowCloseEvent> handler)
+```
+
+#### Subclasses
+| Class | Description |
+|-------|-------------|
+| `ContainerWindow` | Container-based windows |
+| `ItemContainerWindow` | Item container windows |
+| `BlockWindow` | Block interaction windows |
+| `ValidatedWindow` | Windows with validation |
+
+---
+
+### WindowType
+**Package:** `com.hypixel.hytale.protocol.packets.window`
+
+Enum defining window types.
+
+| Value | Description |
+|-------|-------------|
+| `Container` | Generic container window |
+| `PocketCrafting` | Quick/pocket crafting |
+| `BasicCrafting` | Standard crafting table |
+| `DiagramCrafting` | Blueprint-based crafting |
+| `StructuralCrafting` | Building/structural crafting |
+| `Processing` | Processing bench (smelting, etc.) |
+| `Memories` | Memories/journal window |
+
+#### Methods
+```java
+static WindowType[] values()
+static WindowType valueOf(String name)
+int getValue()
+static WindowType fromValue(int value)
+```
+
+---
+
+### OpenWindow
+**Package:** `com.hypixel.hytale.protocol.packets.window`
+
+Protocol packet representing an opened window. Returned by `WindowManager.openWindow()`.
+
+```java
+// Fields
+int id                           // Window slot ID
+WindowType windowType            // Type of window
+String windowData                // JSON data for client
+InventorySection inventory       // Associated inventory
+ExtraResources extraResources    // Additional resources
+
+// Methods
+int getId()
+```
+
+#### Usage Example
+```java
+WindowManager windows = player.getWindowManager();
+
+// Open a window and get reference
+Window myWindow = new MyCustomWindow(WindowType.Container);
+OpenWindow opened = windows.openWindow(myWindow);
+
+int slotId = opened.getId();
+
+// Later, close by slot ID
+windows.closeWindow(slotId);
+```
+
+---
+
 ### PageManager
 **Package:** `com.hypixel.hytale.server.core.ui`
 
@@ -223,6 +376,106 @@ void handleEvent(Ref<EntityStore> ref, Store<EntityStore> store, CustomPageEvent
 
 ---
 
+### Page
+**Package:** `com.hypixel.hytale.protocol.packets.interface_`
+
+Enum defining built-in page types.
+
+| Value | Description |
+|-------|-------------|
+| `None` | No page (close current page) |
+| `Bench` | Crafting bench page |
+| `Inventory` | Player inventory page |
+| `ToolsSettings` | Tools/settings page |
+| `Map` | World map page |
+| `MachinimaEditor` | Machinima editor page |
+| `ContentCreation` | Content creation tools |
+| `Custom` | Custom plugin-defined page |
+
+#### Methods
+```java
+static Page[] values()
+static Page valueOf(String name)
+int getValue()
+static Page fromValue(int value)
+```
+
+#### Usage Example
+```java
+PageManager pages = player.getPageManager();
+
+// Open inventory page
+pages.setPage(ref, store, Page.Inventory);
+
+// Open with animation
+pages.setPage(ref, store, Page.Map, true);
+
+// Close current page
+pages.setPage(ref, store, Page.None);
+```
+
+---
+
+### CustomUIPage
+**Package:** `com.hypixel.hytale.server.core.entity.entities.player.pages`
+
+Abstract base class for custom plugin-defined pages.
+
+```java
+// Constructor
+CustomUIPage(PlayerRef playerRef, CustomPageLifetime lifetime)
+
+// Lifetime management
+void setLifetime(CustomPageLifetime lifetime)
+CustomPageLifetime getLifetime()
+
+// Abstract - must implement
+abstract void build(Ref<EntityStore> ref, UICommandBuilder cmdBuilder,
+                    UIEventBuilder eventBuilder, Store<EntityStore> store)
+
+// Event handling
+void handleDataEvent(Ref<EntityStore> ref, Store<EntityStore> store, String data)
+
+// Lifecycle
+void onDismiss(Ref<EntityStore> ref, Store<EntityStore> store)
+```
+
+#### Subclasses
+| Class | Description |
+|-------|-------------|
+| `BasicCustomUIPage` | Basic custom page implementation |
+| `InteractiveCustomUIPage` | Interactive custom page with event handling |
+
+#### Usage Example
+```java
+public class MyCustomPage extends CustomUIPage {
+    public MyCustomPage(PlayerRef playerRef) {
+        super(playerRef, CustomPageLifetime.UntilDismissed);
+    }
+
+    @Override
+    public void build(Ref<EntityStore> ref, UICommandBuilder cmd,
+                      UIEventBuilder events, Store<EntityStore> store) {
+        // Build UI
+        cmd.append("<panel id='main'><text>Hello World</text></panel>");
+
+        // Bind events
+        events.addEventBinding(CustomUIEventBindingType.Activating, "close-btn");
+    }
+
+    @Override
+    public void onDismiss(Ref<EntityStore> ref, Store<EntityStore> store) {
+        // Cleanup when page closes
+    }
+}
+
+// Open the custom page
+PageManager pages = player.getPageManager();
+pages.openCustomPage(ref, store, new MyCustomPage(playerRef));
+```
+
+---
+
 ### HudManager
 **Package:** `com.hypixel.hytale.server.core.ui`
 
@@ -251,6 +504,67 @@ void resetUserInterface(PlayerRef playerRef)
 
 // Network
 void sendVisibleHudComponents(PacketHandler handler)
+```
+
+---
+
+### HudComponent
+**Package:** `com.hypixel.hytale.protocol.packets.interface_`
+
+Enum defining individual HUD components that can be shown or hidden.
+
+#### Values
+
+| Value | Description |
+|-------|-------------|
+| `Hotbar` | Item hotbar at bottom of screen |
+| `StatusIcons` | Status effect icons |
+| `Reticle` | Crosshair/targeting reticle |
+| `Chat` | Chat window |
+| `Requests` | Friend/party requests |
+| `Notifications` | System notifications |
+| `KillFeed` | Combat kill feed |
+| `InputBindings` | Key binding hints |
+| `PlayerList` | Online player list (Tab) |
+| `EventTitle` | Event title display |
+| `Compass` | Navigation compass |
+| `ObjectivePanel` | Quest/objective panel |
+| `PortalPanel` | Portal information |
+| `BuilderToolsLegend` | Builder mode tools legend |
+| `Speedometer` | Vehicle speed display |
+| `UtilitySlotSelector` | Utility item selector |
+| `BlockVariantSelector` | Block variant picker |
+| `BuilderToolsMaterialSlotSelector` | Builder material selector |
+| `Stamina` | Stamina bar |
+| `AmmoIndicator` | Ammunition counter |
+| `Health` | Health bar |
+| `Mana` | Mana bar |
+| `Oxygen` | Oxygen/breath bar |
+| `Sleep` | Sleep indicator |
+
+#### Methods
+```java
+static HudComponent[] values()
+static HudComponent valueOf(String name)
+int getValue()
+static HudComponent fromValue(int value)
+```
+
+#### Usage Example
+```java
+HudManager hud = player.getHudManager();
+
+// Show only essential HUD elements
+hud.setVisibleHudComponents(playerRef,
+    HudComponent.Hotbar,
+    HudComponent.Health,
+    HudComponent.Reticle);
+
+// Hide chat temporarily
+hud.hideHudComponents(playerRef, HudComponent.Chat);
+
+// Show stamina bar
+hud.showHudComponents(playerRef, HudComponent.Stamina);
 ```
 
 ---

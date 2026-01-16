@@ -11,6 +11,42 @@ TaskRegistration registerTask(CompletableFuture<Void> future)
 TaskRegistration registerTask(ScheduledFuture<Void> future)
 ```
 
+---
+
+## TaskRegistration
+**Package:** `com.hypixel.hytale.server.core.task`
+
+Handle returned from registering a task. Allows unregistering and checking status.
+
+**Extends:** `Registration`
+
+### Methods
+```java
+// Get the underlying Future
+Future<?> getTask()
+
+// Inherited from Registration
+void unregister()        // Unregister the task
+boolean isRegistered()   // Check if still registered
+```
+
+### Usage Example
+```java
+CompletableFuture<Void> task = CompletableFuture.runAsync(() -> {
+    // Long-running operation
+});
+
+TaskRegistration registration = getTaskRegistry().registerTask(task);
+
+// Later, check if still registered
+if (registration.isRegistered()) {
+    // Task is still tracked
+}
+
+// Or unregister manually
+registration.unregister();
+```
+
 ## Usage Examples
 
 ### Simple Async Task

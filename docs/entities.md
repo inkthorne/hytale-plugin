@@ -5,6 +5,8 @@
 Entity (abstract, implements Component<EntityStore>)
   └── LivingEntity (abstract)
         └── Player (implements CommandSender, PermissionHolder)
+
+InteractionManager (component for interaction chains)
 ```
 
 ## PlayerRef
@@ -282,6 +284,48 @@ if (source instanceof Damage.EntitySource entitySource) {
 
 ---
 
+## StatModifiersManager
+**Package:** `com.hypixel.hytale.server.core.entity`
+
+Manages stat modifiers for living entities. Used to recalculate entity stats when equipment, buffs, or other modifiers change.
+
+### Getting the Manager
+```java
+LivingEntity entity = ...;
+StatModifiersManager manager = entity.getStatModifiersManager();
+```
+
+### Methods
+```java
+// Trigger stat recalculation
+void setRecalculate(boolean recalculate)
+
+// Queue specific stats to be cleared before recalculation
+void queueEntityStatsToClear(int[] statIndices)
+
+// Recalculate all stat modifiers for an entity
+void recalculateEntityStatModifiers(
+    Ref<EntityStore> ref,
+    EntityStatMap stats,
+    ComponentAccessor<EntityStore> accessor
+)
+```
+
+### Usage Example
+```java
+// Force recalculation of entity stats after changing equipment
+LivingEntity entity = store.getComponent(ref, LivingEntity.getComponentType());
+if (entity != null) {
+    StatModifiersManager manager = entity.getStatModifiersManager();
+    manager.setRecalculate(true);
+
+    EntityStatMap stats = store.getComponent(ref, EntityStatMap.getComponentType());
+    manager.recalculateEntityStatModifiers(ref, stats, store);
+}
+```
+
+---
+
 ## Velocity API
 
 Component for applying forces and impulses to entities.
@@ -381,11 +425,65 @@ public void applyKnockback(Velocity velocity, Vector3d direction, double force) 
 
 ---
 
+## InteractionManager
+
+**Package:** `com.hypixel.hytale.server.core.entity`
+
+Component for managing entity interaction chains. Used with trigger blocks to execute interaction sequences when entities enter or contact special blocks.
+
+### Tick & Lifecycle
+```java
+void tick()   // Process pending interactions
+void clear()  // Clear all interaction chains
+```
+
+### Chain Management
+```java
+// Start a new interaction chain
+boolean tryStartChain(...)
+
+// Execute pending chains
+void executeChain(...)
+
+// Cancel active chains
+void cancelChains()
+```
+
+### Query
+```java
+// Check if a chain can run
+boolean canRun(...)
+
+// Get active chains
+Object getChains()
+```
+
+### Rules
+```java
+// Apply interaction rules
+void applyRules(...)
+```
+
+### Usage with CollisionResult
+
+The `InteractionManager` is used when processing trigger blocks:
+
+```java
+CollisionResult result = new CollisionResult(false, true);  // Enable triggers
+module.findIntersections(world, hitbox, position, result, true, false);
+
+// Process triggers with interaction manager
+InteractionManager manager = store.getComponent(ref, InteractionManager.getComponentType());
+result.defaultTriggerBlocksProcessing(manager, entity, ref, flag, accessor);
+```
+
+---
+
 ## Entity Events
 
 **Package:** `com.hypixel.hytale.server.core.event.events.entity`
 
-Events related to entity lifecycle and inventory.
+Events related to entity lifecycle. For inventory-related events (`LivingEntityInventoryChangeEvent`, `DropItemEvent`, `SwitchActiveSlotEvent`, `InteractivelyPickupItemEvent`), see [inventory.md](inventory.md#inventory-events).
 
 ### Event Summary
 
@@ -393,16 +491,7 @@ Events related to entity lifecycle and inventory.
 |-------|-------------|
 | `EntityEvent` | Base entity event |
 | `EntityRemoveEvent` | Entity is removed |
-| `LivingEntityInventoryChangeEvent` | Living entity inventory changes |
 | `LivingEntityUseBlockEvent` | Living entity uses a block (keyed by block type) |
-
-**Package:** `com.hypixel.hytale.server.core.event.events.ecs`
-
-| Class | Description |
-|-------|-------------|
-| `DropItemEvent` | Item is dropped (has `Drop` and `PlayerRequest` variants) |
-| `InteractivelyPickupItemEvent` | Item is picked up interactively |
-| `SwitchActiveSlotEvent` | Active inventory slot changes |
 
 ---
 
@@ -428,19 +517,6 @@ Fired when an entity is removed from the world.
 |--------|-------------|-------------|
 | `getEntity()` | `Entity` | The entity being removed |
 | `getRemoveReason()` | `RemoveReason` | Why the entity is being removed |
-
----
-
-### LivingEntityInventoryChangeEvent
-
-**Package:** `com.hypixel.hytale.server.core.event.events.entity`
-
-Fired when a living entity's inventory changes.
-
-| Method | Return Type | Description |
-|--------|-------------|-------------|
-| `getEntity()` | `LivingEntity` | The entity whose inventory changed |
-| `getInventory()` | `Inventory` | The updated inventory |
 
 ---
 
@@ -482,46 +558,6 @@ protected void setup() {
 
 ---
 
-### DropItemEvent
-
-**Package:** `com.hypixel.hytale.server.core.event.events.ecs`
-
-ECS event fired when an item is dropped. Has variants:
-- `DropItemEvent.Drop` - General item drop
-- `DropItemEvent.PlayerRequest` - Player-initiated drop
-
-| Method | Return Type | Description |
-|--------|-------------|-------------|
-| `getItemStack()` | `ItemStack` | The item being dropped |
-| `getPosition()` | `Vector3d` | Drop position |
-
----
-
-### InteractivelyPickupItemEvent
-
-**Package:** `com.hypixel.hytale.server.core.event.events.ecs`
-
-ECS event fired when an item is picked up interactively (e.g., player collecting items).
-
-| Method | Return Type | Description |
-|--------|-------------|-------------|
-| `getItemStack()` | `ItemStack` | The item being picked up |
-
----
-
-### SwitchActiveSlotEvent
-
-**Package:** `com.hypixel.hytale.server.core.event.events.ecs`
-
-ECS event fired when the active inventory slot changes (e.g., player switching hotbar slot).
-
-| Method | Return Type | Description |
-|--------|-------------|-------------|
-| `getPreviousSlot()` | `int` | The previous active slot |
-| `getNewSlot()` | `int` | The new active slot |
-
----
-
 ### Entity Events Usage Example
 
 ```java
@@ -535,48 +571,11 @@ protected void setup() {
         var reason = event.getRemoveReason();
         System.out.println("Entity removed: " + entity + " reason: " + reason);
     });
-
-    // Listen for inventory changes
-    getEventRegistry().registerGlobal(LivingEntityInventoryChangeEvent.class, event -> {
-        var entity = event.getEntity();
-        System.out.println("Inventory changed for: " + entity);
-    });
 }
 ```
 
-### ECS Entity Events Example
+### ECS Inventory Events
 
-For ECS events, use an `EntityEventSystem`:
+For ECS inventory events like `SwitchActiveSlotEvent` and `DropItemEvent`, see the [Inventory Events section in inventory.md](inventory.md#inventory-events).
 
-```java
-import com.hypixel.hytale.component.*;
-import com.hypixel.hytale.component.query.Query;
-import com.hypixel.hytale.component.system.EntityEventSystem;
-import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.event.events.ecs.SwitchActiveSlotEvent;
-import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-
-public class SlotSwitchSystem extends EntityEventSystem<EntityStore, SwitchActiveSlotEvent> {
-
-    public SlotSwitchSystem() {
-        super(SwitchActiveSlotEvent.class);
-    }
-
-    @Override
-    public void handle(int index, ArchetypeChunk<EntityStore> chunk,
-                       Store<EntityStore> store, CommandBuffer<EntityStore> buffer,
-                       SwitchActiveSlotEvent event) {
-        Player player = chunk.getComponent(index, Player.getComponentType());
-        if (player != null) {
-            player.sendMessage(Message.raw(
-                "Switched from slot " + event.getPreviousSlot() + " to " + event.getNewSlot()
-            ));
-        }
-    }
-
-    @Override
-    public Query<EntityStore> getQuery() {
-        return Player.getComponentType();
-    }
-}
+See [events.md](events.md) for general `EntityEventSystem` usage patterns.

@@ -43,6 +43,67 @@ getEventRegistry().register(LoadedNPCEvent.class, event -> {
 
 ---
 
+## BuilderInfo
+
+**Package:** `com.hypixel.hytale.server.npc.asset.builder`
+
+Contains metadata about an NPC definition. Returned by `AllNPCsLoadedEvent.getAllNPCs()`, `AllNPCsLoadedEvent.getLoadedNPCs()`, and `LoadedNPCEvent.getBuilderInfo()`.
+
+### Identity
+
+```java
+int getIndex()           // NPC definition index (unique ID)
+String getKeyName()      // NPC key/identifier name (e.g., "zombie", "skeleton")
+Path getPath()           // File path of the NPC definition asset
+```
+
+### Builder Access
+
+```java
+Builder<?> getBuilder()  // The NPC builder instance for spawning
+```
+
+### Validation State
+
+```java
+boolean isValid()           // Whether the NPC definition is valid
+boolean isValidated()       // Whether validation has been performed
+boolean needsValidation()   // Whether validation is pending
+boolean canBeValidated()    // Whether the NPC can be validated
+```
+
+### State Management
+
+```java
+void setNeedsValidation()   // Mark for re-validation
+void setNeedsReload()       // Mark for reload
+void setForceValidation()   // Force validation
+boolean setValidated(boolean validated)  // Set validation state
+```
+
+### Removal
+
+```java
+boolean isRemoved()         // Whether NPC definition was removed
+void setRemoved()           // Mark as removed
+```
+
+### Usage Example
+
+```java
+getEventRegistry().register(AllNPCsLoadedEvent.class, event -> {
+    event.getAllNPCs().forEach((id, builderInfo) -> {
+        String name = builderInfo.getKeyName();
+        int index = builderInfo.getIndex();
+        boolean valid = builderInfo.isValid();
+
+        getLogger().atInfo().log("NPC %d (%s) - valid: %b", index, name, valid);
+    });
+});
+```
+
+---
+
 ## Sensor Events
 
 Events and classes related to NPC AI sensors. Sensors detect entities and trigger NPC behaviors.

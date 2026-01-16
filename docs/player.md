@@ -53,8 +53,14 @@ String getMessageId()
 String getColor()
 List<Message> getChildren()
 String getAnsiMessage()
-FormattedMessage getFormattedMessage()
+FormattedMessage getFormattedMessage()  // Internal protocol format (see note below)
 ```
+
+### FormattedMessage (Internal)
+
+**Package:** `com.hypixel.hytale.protocol`
+
+`FormattedMessage` is the wire-format representation used for network transmission. It contains the same information as `Message` but in a protocol-friendly structure. Generally, you should use the `Message` class for all messaging operations - `FormattedMessage` is primarily for internal/advanced use cases.
 
 ### Simple Message
 ```java
@@ -90,6 +96,54 @@ Message combined = Message.join(
 ### Broadcast to World
 ```java
 world.sendMessage(Message.raw("Server announcement!"));
+```
+
+---
+
+## HiddenPlayersManager
+**Package:** `com.hypixel.hytale.server.core.entity.entities.player`
+
+Manages player visibility - allows hiding players from each other. Useful for vanish systems, spectator modes, or game-specific visibility rules.
+
+### Getting the Manager
+```java
+HiddenPlayersManager manager = playerRef.getHiddenPlayersManager();
+```
+
+### Methods
+```java
+void hidePlayer(UUID uuid)          // Hide a player from this player
+void showPlayer(UUID uuid)          // Show a previously hidden player
+boolean isPlayerHidden(UUID uuid)   // Check if a player is hidden
+```
+
+### Usage Example
+```java
+// Vanish system - hide admin from all other players
+public void vanishPlayer(PlayerRef adminRef, World world) {
+    UUID adminUuid = adminRef.getUuid();
+
+    for (PlayerRef otherRef : world.getPlayerRefs()) {
+        if (!otherRef.getUuid().equals(adminUuid)) {
+            HiddenPlayersManager manager = otherRef.getHiddenPlayersManager();
+            manager.hidePlayer(adminUuid);
+        }
+    }
+    adminRef.sendMessage(Message.raw("You are now vanished"));
+}
+
+// Unvanish - show admin to all players again
+public void unvanishPlayer(PlayerRef adminRef, World world) {
+    UUID adminUuid = adminRef.getUuid();
+
+    for (PlayerRef otherRef : world.getPlayerRefs()) {
+        if (!otherRef.getUuid().equals(adminUuid)) {
+            HiddenPlayersManager manager = otherRef.getHiddenPlayersManager();
+            manager.showPlayer(adminUuid);
+        }
+    }
+    adminRef.sendMessage(Message.raw("You are now visible"));
+}
 ```
 
 ---
@@ -422,103 +476,4 @@ protected void setup() {
 
 ## Crafting Events
 
-Events related to crafting and recipes.
-
-### CraftRecipeEvent
-
-**Package:** `com.hypixel.hytale.server.core.event.events.ecs`
-
-Abstract base ECS event for crafting. Extends `CancellableEcsEvent`. Has two concrete variants for pre/post crafting.
-
-#### Base Methods
-
-| Method | Return Type | Description |
-|--------|-------------|-------------|
-| `getCraftedRecipe()` | `CraftingRecipe` | The recipe being crafted |
-| `getQuantity()` | `int` | Number of items being crafted |
-
-### CraftRecipeEvent.Pre
-
-Fired before crafting completes. Cancellable.
-
-| Method | Return Type | Description |
-|--------|-------------|-------------|
-| `getCraftedRecipe()` | `CraftingRecipe` | The recipe being crafted |
-| `getQuantity()` | `int` | Number of items being crafted |
-| `isCancelled()` | `boolean` | Whether the event is cancelled |
-| `setCancelled(boolean)` | `void` | Cancel the crafting |
-
-### CraftRecipeEvent.Post
-
-Fired after crafting completes.
-
-| Method | Return Type | Description |
-|--------|-------------|-------------|
-| `getCraftedRecipe()` | `CraftingRecipe` | The recipe that was crafted |
-| `getQuantity()` | `int` | Number of items crafted |
-
-### Usage Example
-
-```java
-import com.hypixel.hytale.component.*;
-import com.hypixel.hytale.component.query.Query;
-import com.hypixel.hytale.component.system.EntityEventSystem;
-import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.event.events.ecs.CraftRecipeEvent;
-import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-
-public class CraftingSystem extends EntityEventSystem<EntityStore, CraftRecipeEvent.Pre> {
-
-    public CraftingSystem() {
-        super(CraftRecipeEvent.Pre.class);
-    }
-
-    @Override
-    public void handle(int index, ArchetypeChunk<EntityStore> chunk,
-                       Store<EntityStore> store, CommandBuffer<EntityStore> buffer,
-                       CraftRecipeEvent.Pre event) {
-        Player player = chunk.getComponent(index, Player.getComponentType());
-        if (player != null) {
-            var recipe = event.getCraftedRecipe();
-            int quantity = event.getQuantity();
-            player.sendMessage(Message.raw("Crafting " + quantity + " items..."));
-
-            // Optionally cancel the craft
-            // event.setCancelled(true);
-        }
-    }
-
-    @Override
-    public Query<EntityStore> getQuery() {
-        return Player.getComponentType();
-    }
-}
-```
-
-### Registration
-
-```java
-@Override
-protected void setup() {
-    // Listen for pre-craft (can cancel)
-    getEntityStoreRegistry().registerSystem(new CraftingSystem());
-
-    // Or listen for post-craft (after completion)
-    getEntityStoreRegistry().registerSystem(
-        new EntityEventSystem<EntityStore, CraftRecipeEvent.Post>(CraftRecipeEvent.Post.class) {
-            @Override
-            public void handle(int index, ArchetypeChunk<EntityStore> chunk,
-                               Store<EntityStore> store, CommandBuffer<EntityStore> buffer,
-                               CraftRecipeEvent.Post event) {
-                // Handle post-craft
-            }
-
-            @Override
-            public Query<EntityStore> getQuery() {
-                return Player.getComponentType();
-            }
-        }
-    );
-}
-```
+For crafting-related events (`CraftRecipeEvent`, `CraftRecipeEvent.Pre`, `CraftRecipeEvent.Post`), see [inventory.md](inventory.md#crafting-events).

@@ -13,9 +13,16 @@ BasicCollisionData (base collision data)
         └── BlockCollisionData
   └── CharacterCollisionData
 
+BlockContactData
+  └── BoxBlockIntersectionEvaluator
+        implements IBlockCollisionEvaluator
+
+IBlockCollisionEvaluator (interface)
 CollisionConfig (collision configuration)
 CollisionFilter<D, T> (filtering interface)
 CollisionMaterial (material constants)
+CollisionModuleConfig (module configuration)
+CollisionDataArray<T> (generic data container)
 ```
 
 ## CollisionModule
@@ -409,6 +416,188 @@ static final int MATERIAL_SUBMERGED  // Inside fluid
 static final int MATERIAL_SET_ANY    // Match any material
 static final int MATERIAL_DAMAGE     // Damage blocks
 static final int MATERIAL_SET_NONE   // Match no materials
+```
+
+---
+
+## BasicCollisionData
+**Package:** `com.hypixel.hytale.server.core.modules.collision`
+
+Base class for collision data, storing the collision point and start time/position.
+
+### Public Fields
+```java
+public final Vector3d collisionPoint  // Point where collision occurred
+public double collisionStart          // Start time/position of collision
+```
+
+### Methods
+```java
+// Set collision start data
+void setStart(Vector3d point, double start)
+```
+
+### Static Fields
+```java
+// Comparator for sorting by collision start
+static Comparator<BasicCollisionData> COLLISION_START_COMPARATOR
+```
+
+---
+
+## IBlockCollisionEvaluator
+**Package:** `com.hypixel.hytale.server.core.modules.collision`
+
+Interface for evaluating block collisions.
+
+### Methods
+```java
+// Get the collision start time/position
+double getCollisionStart()
+
+// Set collision data from evaluation
+void setCollisionData(BlockCollisionData data, CollisionConfig config, int flags)
+```
+
+---
+
+## BoxBlockIntersectionEvaluator
+**Package:** `com.hypixel.hytale.server.core.modules.collision`
+
+Evaluates intersection between a box and blocks. Used for position validation and overlap detection.
+
+**Extends:** `BlockContactData`
+**Implements:** `IBlockCollisionEvaluator`
+
+### Box Configuration
+```java
+void setBox(Box box)
+void setPosition(Vector3d position)
+void expandBox(double amount)
+```
+
+### Intersection Tests
+```java
+// Basic intersection
+boolean intersectBox()
+
+// Intersection with touch detection
+boolean intersectBoxComputeTouch()
+
+// Intersection with ground detection
+boolean intersectBoxComputeOnGround()
+```
+
+### Query Results
+```java
+boolean isBoxIntersecting()
+boolean isTouching()
+boolean touchesCeil()
+```
+
+---
+
+## CollisionModuleConfig
+**Package:** `com.hypixel.hytale.server.core.modules.collision`
+
+Configuration for the collision module.
+
+### Constants
+```java
+static final double MOVEMENT_THRESHOLD  // Minimum movement to trigger collision check
+static final double EXTENT              // Default extent value
+```
+
+### Methods
+```java
+// Maximum extent for collision queries
+double getExtentMax()
+void setExtentMax(double value)
+
+// Debug: dump invalid block positions
+boolean isDumpInvalidBlocks()
+void setDumpInvalidBlocks(boolean dump)
+
+// Minimum thickness for collision surfaces
+double getMinimumThickness()
+void setMinimumThickness(double thickness)
+boolean hasMinimumThickness()
+```
+
+---
+
+## CollisionDataArray<T>
+**Package:** `com.hypixel.hytale.server.core.modules.collision`
+
+Generic container for collision data elements. Used internally by `CollisionResult` for managing block collisions, character collisions, and triggers.
+
+### Allocation
+```java
+T alloc()     // Allocate and return a new element
+void reset()  // Clear all elements
+```
+
+### Access
+```java
+int getCount()
+int size()
+boolean isEmpty()
+T get(int index)
+T getFirst()
+T forgetFirst()  // Get first element and remove it
+```
+
+### Sorting
+```java
+void sort(Comparator<? super T> comparator)
+```
+
+---
+
+## CollisionResultComponent
+**Package:** `com.hypixel.hytale.server.core.modules.entity.component`
+
+Entity component that wraps a `CollisionResult` for per-entity collision tracking. Used internally by the physics system to track collision state between ticks.
+
+### Getting the Component
+```java
+CollisionResultComponent collisionComp = store.getComponent(ref, CollisionResultComponent.getComponentType());
+```
+
+### Collision Result Access
+```java
+CollisionResult getCollisionResult()  // Get the wrapped CollisionResult
+```
+
+### Position Tracking
+```java
+Vector3d getCollisionStartPosition()      // Start position of collision check
+Vector3d getCollisionPositionOffset()     // Position offset/movement
+Vector3d getCollisionStartPositionCopy()  // Copy of start position
+Vector3d getCollisionPositionOffsetCopy() // Copy of offset
+void resetLocationChange()                // Reset position tracking
+```
+
+### Pending Collision State
+```java
+boolean isPendingCollisionCheck()    // Is a collision check pending?
+void markPendingCollisionCheck()     // Mark for collision check
+void consumePendingCollisionCheck()  // Clear pending flag
+```
+
+### Usage with Player
+```java
+// Configure trigger block processing for a player
+Player player = store.getComponent(ref, Player.getComponentType());
+CollisionResultComponent collisionComp = store.getComponent(ref, CollisionResultComponent.getComponentType());
+
+if (collisionComp != null) {
+    // Enable/disable trigger block processing
+    player.configTriggerBlockProcessing(true, true, collisionComp);
+
+    // Access collision result for custom processing
+    CollisionResult result = collisionComp.getCollisionResult();
+}
 ```
 
 ---
