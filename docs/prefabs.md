@@ -271,10 +271,12 @@ ECS event fired when a prefab is being pasted into the world. Extends `Cancellab
 
 | Method | Return Type | Description |
 |--------|-------------|-------------|
-| `getPrefabId()` | `int` | ID of the prefab being pasted |
+| `getPrefabId()` | `int` | Internal ID of the prefab being pasted |
 | `isPasteStart()` | `boolean` | True if this is the start of pasting, false if end |
 | `isCancelled()` | `boolean` | Whether the paste is cancelled |
 | `setCancelled(boolean)` | `void` | Cancel or uncancel the paste |
+
+> **Note:** `getPrefabId()` in events returns an internal integer ID, not the string identifier (e.g., `"hytale:zombie"`) used with `PrefabStore.getPrefab()`.
 
 ---
 

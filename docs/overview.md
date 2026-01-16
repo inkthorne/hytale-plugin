@@ -27,6 +27,9 @@ Quick reference for finding the right documentation file.
 | combat.md | Damage system and kill feed | Damage, DamageEventSystem, KillFeedEvent |
 | npc.md | NPC loading and AI sensors | AllNPCsLoadedEvent, SensorEvent |
 | adventure.md | Adventure features | DiscoverInstanceEvent, TreasureChestOpeningEvent |
+| asset-editor.md | Asset editor events | EditorClientEvent, AssetEditorSelectAssetEvent |
+| i18n.md | Localization events | GenerateDefaultLanguageEvent |
+| singleplayer.md | Singleplayer events | SingleplayerRequestAccessEvent |
 
 ## Class Lookup Index
 
@@ -63,6 +66,10 @@ MoonPhaseChangeEvent             → world.md
 EventRegistry                    → events.md
 EventPriority                    → events.md
 EntityEventSystem                → events.md
+IBaseEvent, IEvent               → events.md
+ICancellable                     → events.md
+EcsEvent, CancellableEcsEvent    → events.md
+ICancellableEcsEvent             → events.md
 
 # ECS
 Store, Ref, Component            → components.md
@@ -126,7 +133,38 @@ EventSearchType                  → npc.md
 
 # Adventure
 DiscoverInstanceEvent            → adventure.md
+DiscoverZoneEvent                → adventure.md
 TreasureChestOpeningEvent        → adventure.md
+InstanceDiscoveryConfig          → adventure.md
+WorldMapTracker                  → adventure.md
+ZoneDiscoveryInfo                → adventure.md
+
+# Asset Events
+AssetPackRegisterEvent           → assets.md
+AssetPackUnregisterEvent         → assets.md
+LoadAssetEvent                   → assets.md
+GenerateSchemaEvent              → assets.md
+CommonAssetMonitorEvent          → assets.md
+SendCommonAssetsEvent            → assets.md
+PathEvent                        → assets.md
+
+# Asset Editor
+EditorClientEvent                → asset-editor.md
+AssetEditorActivateButtonEvent   → asset-editor.md
+AssetEditorAssetCreatedEvent     → asset-editor.md
+AssetEditorClientDisconnectEvent → asset-editor.md
+AssetEditorSelectAssetEvent      → asset-editor.md
+AssetEditorFetchAutoCompleteDataEvent → asset-editor.md
+AssetEditorRequestDataSetEvent   → asset-editor.md
+
+# Localization
+GenerateDefaultLanguageEvent     → i18n.md
+
+# Singleplayer
+SingleplayerRequestAccessEvent   → singleplayer.md
+
+# Chunk Events
+ChunkPreLoadProcessEvent         → world.md
 ```
 
 ## Topic Groups
@@ -146,9 +184,14 @@ TreasureChestOpeningEvent        → adventure.md
 - tasks.md - Async scheduling
 - ui.md - Player UI
 - blocks.md - Block manipulation and block events
-- assets.md - Asset registry
+- assets.md - Asset registry and asset events
 - projectiles.md - Projectile spawning and physics
 - collision.md - Collision detection and queries
+- i18n.md - Localization events
+- singleplayer.md - Singleplayer events
+
+**Editor** - Development tools
+- asset-editor.md - Asset editor events
 
 **Combat & NPCs** - Combat and AI systems
 - combat.md - Damage system, damage events, kill feed

@@ -394,6 +394,7 @@ Events related to entity lifecycle and inventory.
 | `EntityEvent` | Base entity event |
 | `EntityRemoveEvent` | Entity is removed |
 | `LivingEntityInventoryChangeEvent` | Living entity inventory changes |
+| `LivingEntityUseBlockEvent` | Living entity uses a block (keyed by block type) |
 
 **Package:** `com.hypixel.hytale.server.core.event.events.ecs`
 
@@ -440,6 +441,44 @@ Fired when a living entity's inventory changes.
 |--------|-------------|-------------|
 | `getEntity()` | `LivingEntity` | The entity whose inventory changed |
 | `getInventory()` | `Inventory` | The updated inventory |
+
+---
+
+### LivingEntityUseBlockEvent
+
+**Package:** `com.hypixel.hytale.server.core.event.events.entity`
+
+Fired when a living entity uses/interacts with a block. Implements `IEvent<String>` (keyed by block type).
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `getBlockType()` | `String` | The block type being used |
+| `getRef()` | `Ref<EntityStore>` | Entity reference |
+
+### Usage Example
+
+Since this is a keyed event (keyed by block type String), use `registerGlobal()` to catch all block uses:
+
+```java
+import com.hypixel.hytale.server.core.event.events.entity.LivingEntityUseBlockEvent;
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+
+@Override
+protected void setup() {
+    // Listen for all block uses
+    getEventRegistry().registerGlobal(LivingEntityUseBlockEvent.class, event -> {
+        var ref = event.getRef();
+        String blockType = event.getBlockType();
+        System.out.println("Entity used block: " + blockType);
+    });
+
+    // Or listen for a specific block type
+    getEventRegistry().register(LivingEntityUseBlockEvent.class, "hytale:crafting_table", event -> {
+        System.out.println("Entity used crafting table!");
+    });
+}
+```
 
 ---
 

@@ -259,6 +259,8 @@ public class KillFeedDisplaySystem extends EntityEventSystem<EntityStore, KillFe
 }
 ```
 
+> **Note:** Unlike `DamageEventSystem`, `KillFeedEvent` handlers can return `null` from `getQuery()` to handle all entities.
+
 ### Registration
 
 ```java

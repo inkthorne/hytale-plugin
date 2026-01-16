@@ -466,6 +466,31 @@ browser.buildUI(cmd, events);
 
 ---
 
+## UI Events
+
+### WindowCloseEvent
+
+**Package:** `com.hypixel.hytale.server.core.entity.entities.player.windows`
+
+Event fired when a player window is closed. Implements `IEvent<Void>`.
+
+This is a minimal event that signals window closure. It does not provide additional methods beyond the basic event interface.
+
+### Usage Example
+
+```java
+import com.hypixel.hytale.server.core.entity.entities.player.windows.WindowCloseEvent;
+
+@Override
+protected void setup() {
+    getEventRegistry().register(WindowCloseEvent.class, event -> {
+        System.out.println("A window was closed");
+    });
+}
+```
+
+---
+
 ## Notes
 - UI systems are XML-based; understand the client protocol for full usage
 - Window/Page/HUD managers handle network synchronization automatically

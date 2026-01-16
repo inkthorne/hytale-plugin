@@ -234,13 +234,14 @@ protected void setup() {
 
 ## Chunk Events
 
-Events related to chunk saving and unloading.
+Events related to chunk loading, saving, and unloading.
 
 ### Event Summary
 
 | Class | Package | Description | Cancellable |
 |-------|---------|-------------|-------------|
 | `ChunkEvent` | `...universe.world.events` | Base class for chunk events | - |
+| `ChunkPreLoadProcessEvent` | `...universe.world.events` | Chunk pre-load processing | No |
 | `ChunkSaveEvent` | `...universe.world.events.ecs` | Chunk is being saved (ECS) | Yes |
 | `ChunkUnloadEvent` | `...universe.world.events.ecs` | Chunk is being unloaded (ECS) | Yes |
 | `MoonPhaseChangeEvent` | `...universe.world.events.ecs` | Moon phase changed (ECS) | No |
@@ -298,6 +299,30 @@ ECS event fired when the moon phase changes. Extends `EcsEvent` (not cancellable
 | Method | Return Type | Description |
 |--------|-------------|-------------|
 | `getNewMoonPhase()` | `int` | The new moon phase index |
+
+---
+
+### ChunkPreLoadProcessEvent
+
+**Package:** `com.hypixel.hytale.server.core.universe.world.events`
+
+Extends `ChunkEvent`, implements `IProcessedEvent`. Fired before a chunk is fully loaded, allowing pre-processing.
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `isNewlyGenerated()` | `boolean` | Whether chunk is newly generated |
+| `getHolder()` | `Holder<ChunkStore>` | Chunk store holder |
+| `processEvent(String)` | `void` | Process the event |
+| `didLog()` | `boolean` | Whether event was logged |
+
+**Usage Example:**
+```java
+getEventRegistry().registerGlobal(ChunkPreLoadProcessEvent.class, event -> {
+    if (event.isNewlyGenerated()) {
+        System.out.println("New chunk generated: " + event.getChunk());
+    }
+});
+```
 
 ---
 

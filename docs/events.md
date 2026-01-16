@@ -2,16 +2,22 @@
 
 This document covers the core event system. For specific event classes, see the relevant domain documentation:
 
-- **Player events** → [player.md](player.md)
+- **Player events** → [player.md](player.md) (includes ChangeGameModeEvent, CraftRecipeEvent)
 - **Block events** → [blocks.md](blocks.md)
 - **World/Chunk events** → [world.md](world.md)
-- **Entity events** → [entities.md](entities.md)
+- **Entity events** → [entities.md](entities.md) (includes LivingEntityUseBlockEvent)
 - **Combat/Damage events** → [combat.md](combat.md)
 - **NPC/Sensor events** → [npc.md](npc.md)
-- **Adventure events** → [adventure.md](adventure.md)
+- **Adventure events** → [adventure.md](adventure.md) (includes DiscoverZoneEvent)
+- **Inventory events** → [inventory.md](inventory.md) (includes ItemContainerChangeEvent)
+- **UI events** → [ui.md](ui.md) (includes WindowCloseEvent)
 - **Permission events** → [permissions.md](permissions.md)
 - **Prefab events** → [prefabs.md](prefabs.md)
 - **Lifecycle events** → [plugin-lifecycle.md](plugin-lifecycle.md)
+- **Asset events** → [assets.md](assets.md) (includes LoadAssetEvent, AssetPackRegisterEvent)
+- **Asset editor events** → [asset-editor.md](asset-editor.md)
+- **Localization events** → [i18n.md](i18n.md) (includes GenerateDefaultLanguageEvent)
+- **Singleplayer events** → [singleplayer.md](singleplayer.md)
 
 ---
 
@@ -114,6 +120,100 @@ getEventRegistry().register(EventPriority.EARLY, PlayerConnectEvent.class, event
 getEventRegistry().register((short) 100, PlayerConnectEvent.class, event -> {
     // Custom priority
 });
+```
+
+---
+
+## Event Base Types
+
+Core interfaces and classes that events extend or implement.
+
+### IBaseEvent<KeyType>
+
+**Package:** `com.hypixel.hytale.event`
+
+Marker interface for all events. The generic `KeyType` parameter specifies whether the event is keyed (e.g., `String`) or non-keyed (`Void`).
+
+```java
+public interface IBaseEvent<KeyType> {
+    // Marker interface
+}
+```
+
+### IEvent<KeyType>
+
+**Package:** `com.hypixel.hytale.event`
+
+Marker interface for keyed events. Extends `IBaseEvent`.
+
+```java
+public interface IEvent<KeyType> extends IBaseEvent<KeyType> {
+    // Marker interface for keyed events
+}
+```
+
+### ICancellable
+
+**Package:** `com.hypixel.hytale.event`
+
+Interface for events that can be cancelled.
+
+```java
+public interface ICancellable {
+    boolean isCancelled();
+    void setCancelled(boolean cancelled);
+}
+```
+
+### EcsEvent
+
+**Package:** `com.hypixel.hytale.component.system`
+
+Abstract base class for ECS events handled by `EntityEventSystem`.
+
+```java
+public abstract class EcsEvent {
+    public EcsEvent();
+}
+```
+
+### ICancellableEcsEvent
+
+**Package:** `com.hypixel.hytale.component.system`
+
+Interface for cancellable ECS events.
+
+```java
+public interface ICancellableEcsEvent {
+    boolean isCancelled();
+    void setCancelled(boolean cancelled);
+}
+```
+
+### CancellableEcsEvent
+
+**Package:** `com.hypixel.hytale.component.system`
+
+Abstract base class for cancellable ECS events. Extends `EcsEvent` and implements `ICancellableEcsEvent`.
+
+```java
+public abstract class CancellableEcsEvent extends EcsEvent implements ICancellableEcsEvent {
+    public CancellableEcsEvent();
+    public final boolean isCancelled();
+    public final void setCancelled(boolean cancelled);
+}
+```
+
+### Event Type Hierarchy
+
+```
+IBaseEvent<KeyType>
+├── IEvent<KeyType>           (keyed events registered via EventRegistry)
+│   └── ICancellable          (optional - for cancellable keyed events)
+│
+EcsEvent                      (ECS events handled by EntityEventSystem)
+└── CancellableEcsEvent       (cancellable ECS events)
+    └── ICancellableEcsEvent  (interface)
 ```
 
 ---
@@ -235,6 +335,9 @@ protected void setup() {
 | `BreakBlockEvent` | `...event.events.ecs` | Block broken |
 | `DamageBlockEvent` | `...event.events.ecs` | Block damaged |
 | `UseBlockEvent.Pre/Post` | `...event.events.ecs` | Block used |
+| `ChangeGameModeEvent` | `...event.events.ecs` | Game mode changes (cancellable) |
+| `CraftRecipeEvent.Pre/Post` | `...event.events.ecs` | Crafting events (Pre is cancellable) |
+| `DiscoverZoneEvent.Display` | `...event.events.ecs` | Zone discovery UI (cancellable) |
 | `Damage` | `...modules.entity.damage` | Entity takes damage |
 | `ChunkSaveEvent` | `...world.events.ecs` | Chunk saved |
 | `ChunkUnloadEvent` | `...world.events.ecs` | Chunk unloaded |

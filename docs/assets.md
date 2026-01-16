@@ -200,3 +200,140 @@ Assets are loaded during server startup:
 - Use the appropriate codec type for your asset structure
 - Assets persist across server restarts (stored in data files)
 - Explore specific asset type packages for detailed APIs
+
+---
+
+## Asset Events
+
+Events related to asset pack lifecycle, loading, and file monitoring.
+
+### Event Summary
+
+| Class | Package | Key Type | Description |
+|-------|---------|----------|-------------|
+| `AssetPackRegisterEvent` | `...core.asset` | `Void` | Asset pack registered |
+| `AssetPackUnregisterEvent` | `...core.asset` | `Void` | Asset pack unregistered |
+| `LoadAssetEvent` | `...core.asset` | `Void` | Assets loaded (has priority constants) |
+| `GenerateSchemaEvent` | `...core.asset` | `Void` | Schema generation |
+| `CommonAssetMonitorEvent` | `...core.asset.common.events` | `Void` | Common asset file monitoring |
+| `SendCommonAssetsEvent` | `...core.asset.common.events` | `Void` | Async - sending assets to client |
+| `PathEvent` | `...core.asset.monitor` | N/A | File path change monitoring |
+
+---
+
+### AssetPackRegisterEvent
+
+**Package:** `com.hypixel.hytale.server.core.asset`
+
+Fired when an asset pack is registered with the server.
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `getAssetPack()` | `AssetPack` | The registered asset pack |
+
+---
+
+### AssetPackUnregisterEvent
+
+**Package:** `com.hypixel.hytale.server.core.asset`
+
+Fired when an asset pack is unregistered from the server.
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `getAssetPack()` | `AssetPack` | The unregistered asset pack |
+
+---
+
+### LoadAssetEvent
+
+**Package:** `com.hypixel.hytale.server.core.asset`
+
+Fired during asset loading phase. Supports priority-based loading order.
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `getBootStart()` | `long` | Boot start timestamp |
+| `isShouldShutdown()` | `boolean` | Whether shutdown was requested |
+| `getReasons()` | `List<String>` | Failure reasons |
+| `failed(boolean, String)` | `void` | Mark asset loading as failed |
+
+**Priority Constants:**
+| Constant | Description |
+|----------|-------------|
+| `PRIORITY_LOAD_COMMON` | Load common assets first |
+| `PRIORITY_LOAD_REGISTRY` | Load registry assets |
+| `PRIORITY_LOAD_LATE` | Load late-stage assets |
+
+---
+
+### GenerateSchemaEvent
+
+**Package:** `com.hypixel.hytale.server.core.asset`
+
+Fired during schema generation for assets.
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `getContext()` | `SchemaContext` | Schema context |
+| `getVsCodeConfig()` | `BsonDocument` | VSCode config document |
+| `addSchemaLink(String, List<String>, String)` | `void` | Add schema link |
+| `addSchema(String, Schema)` | `void` | Add schema |
+
+---
+
+### CommonAssetMonitorEvent
+
+**Package:** `com.hypixel.hytale.server.core.asset.common.events`
+
+Extends `AssetMonitorEvent<Void>`. Fired when common asset files are changed. Constructor takes lists of created, modified, deleted, and moved paths.
+
+---
+
+### SendCommonAssetsEvent
+
+**Package:** `com.hypixel.hytale.server.core.asset.common.events`
+
+Async event fired when sending assets to clients.
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `getPacketHandler()` | `PacketHandler` | Network handler |
+| `getRequestedAssets()` | `Asset[]` | Assets being sent |
+
+---
+
+### PathEvent
+
+**Package:** `com.hypixel.hytale.server.core.asset.monitor`
+
+Represents a file path change event for asset monitoring.
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `getEventKind()` | `EventKind` | Type of path event |
+| `getTimestamp()` | `long` | Event timestamp |
+
+---
+
+### Asset Events Registration Example
+
+```java
+import com.hypixel.hytale.server.core.asset.*;
+
+@Override
+protected void setup() {
+    // Listen for asset pack registration
+    getEventRegistry().register(AssetPackRegisterEvent.class, event -> {
+        System.out.println("Asset pack registered: " + event.getAssetPack());
+    });
+
+    // Listen for asset loading with priority
+    getEventRegistry().register(LoadAssetEvent.PRIORITY_LOAD_LATE,
+        LoadAssetEvent.class, event -> {
+        if (event.isShouldShutdown()) {
+            System.out.println("Asset loading aborted: " + event.getReasons());
+        }
+    });
+}
+```

@@ -265,6 +265,52 @@ EventRegistration registerChangeEvent(short slotIndex, Consumer<ItemContainerCha
 
 ---
 
+## ItemContainerChangeEvent
+
+**Package:** `com.hypixel.hytale.server.core.inventory.container`
+
+Java Record that fires when an item container's contents change. Implements `IEvent<Void>`.
+
+### Record Components
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `container()` | `ItemContainer` | The container that changed |
+| `transaction()` | `Transaction` | The transaction details |
+
+### Usage Example
+
+Register directly on an ItemContainer:
+
+```java
+Player player = store.getComponent(ref, Player.getComponentType());
+Inventory inventory = player.getInventory();
+ItemContainer hotbar = inventory.getHotbar();
+
+// Listen for changes to this specific container
+hotbar.registerChangeEvent(event -> {
+    ItemContainer container = event.container();
+    Transaction transaction = event.transaction();
+    System.out.println("Container changed: " + transaction);
+});
+
+// Listen for changes to a specific slot
+hotbar.registerChangeEvent((short) 0, event -> {
+    System.out.println("First hotbar slot changed!");
+});
+
+// With priority
+hotbar.registerChangeEvent(EventPriority.EARLY, event -> {
+    System.out.println("Early handler for container change");
+});
+```
+
+### Note
+
+This event is specific to individual `ItemContainer` instances. To listen for general inventory changes across all entities, use `LivingEntityInventoryChangeEvent` instead (see [entities.md](entities.md)).
+
+---
+
 ## SimpleItemContainer
 **Package:** `com.hypixel.hytale.server.core.inventory.container`
 

@@ -116,6 +116,7 @@ Events related to player connections, interactions, and input.
 | `DrainPlayerFromWorldEvent` | Player removed from a world | No |
 | `PlayerSetupConnectEvent` | Player setup phase connect | No |
 | `PlayerSetupDisconnectEvent` | Player setup phase disconnect | No |
+| `ChangeGameModeEvent` | Player game mode changes (ECS, cancellable) | No |
 
 **Note:** `PlayerMouseButtonEvent` is client-side only and does not fire on the server.
 
@@ -337,5 +338,187 @@ protected void setup() {
     getEventRegistry().registerGlobal(PlayerInteractEvent.class, event -> {
         event.getPlayer().sendMessage(Message.raw("You interacted!"));
     });
+}
+```
+
+---
+
+## ChangeGameModeEvent
+
+**Package:** `com.hypixel.hytale.server.core.event.events.ecs`
+
+ECS event fired when a player's game mode changes. Extends `CancellableEcsEvent`.
+
+### Methods
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `getGameMode()` | `GameMode` | Get the new game mode |
+| `setGameMode(GameMode)` | `void` | Change the target game mode |
+| `isCancelled()` | `boolean` | Whether the event is cancelled |
+| `setCancelled(boolean)` | `void` | Cancel the mode change |
+
+### GameMode Enum
+
+**Package:** `com.hypixel.hytale.server.core.entity.entities.player`
+
+| Value | Description |
+|-------|-------------|
+| `Adventure` | Survival/adventure mode |
+| `Creative` | Creative mode with unlimited resources |
+
+### Usage Example
+
+Handle game mode changes using an `EntityEventSystem`:
+
+```java
+import com.hypixel.hytale.component.*;
+import com.hypixel.hytale.component.query.Query;
+import com.hypixel.hytale.component.system.EntityEventSystem;
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.event.events.ecs.ChangeGameModeEvent;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+
+public class GameModeChangeSystem extends EntityEventSystem<EntityStore, ChangeGameModeEvent> {
+
+    public GameModeChangeSystem() {
+        super(ChangeGameModeEvent.class);
+    }
+
+    @Override
+    public void handle(int index, ArchetypeChunk<EntityStore> chunk,
+                       Store<EntityStore> store, CommandBuffer<EntityStore> buffer,
+                       ChangeGameModeEvent event) {
+        Player player = chunk.getComponent(index, Player.getComponentType());
+        if (player != null) {
+            player.sendMessage(Message.raw("Switching to " + event.getGameMode() + " mode"));
+
+            // Optionally prevent the mode change
+            // event.setCancelled(true);
+
+            // Or change to a different mode
+            // event.setGameMode(GameMode.Creative);
+        }
+    }
+
+    @Override
+    public Query<EntityStore> getQuery() {
+        return Player.getComponentType();
+    }
+}
+```
+
+### Registration
+
+```java
+@Override
+protected void setup() {
+    getEntityStoreRegistry().registerSystem(new GameModeChangeSystem());
+}
+```
+
+---
+
+## Crafting Events
+
+Events related to crafting and recipes.
+
+### CraftRecipeEvent
+
+**Package:** `com.hypixel.hytale.server.core.event.events.ecs`
+
+Abstract base ECS event for crafting. Extends `CancellableEcsEvent`. Has two concrete variants for pre/post crafting.
+
+#### Base Methods
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `getCraftedRecipe()` | `CraftingRecipe` | The recipe being crafted |
+| `getQuantity()` | `int` | Number of items being crafted |
+
+### CraftRecipeEvent.Pre
+
+Fired before crafting completes. Cancellable.
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `getCraftedRecipe()` | `CraftingRecipe` | The recipe being crafted |
+| `getQuantity()` | `int` | Number of items being crafted |
+| `isCancelled()` | `boolean` | Whether the event is cancelled |
+| `setCancelled(boolean)` | `void` | Cancel the crafting |
+
+### CraftRecipeEvent.Post
+
+Fired after crafting completes.
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `getCraftedRecipe()` | `CraftingRecipe` | The recipe that was crafted |
+| `getQuantity()` | `int` | Number of items crafted |
+
+### Usage Example
+
+```java
+import com.hypixel.hytale.component.*;
+import com.hypixel.hytale.component.query.Query;
+import com.hypixel.hytale.component.system.EntityEventSystem;
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.event.events.ecs.CraftRecipeEvent;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+
+public class CraftingSystem extends EntityEventSystem<EntityStore, CraftRecipeEvent.Pre> {
+
+    public CraftingSystem() {
+        super(CraftRecipeEvent.Pre.class);
+    }
+
+    @Override
+    public void handle(int index, ArchetypeChunk<EntityStore> chunk,
+                       Store<EntityStore> store, CommandBuffer<EntityStore> buffer,
+                       CraftRecipeEvent.Pre event) {
+        Player player = chunk.getComponent(index, Player.getComponentType());
+        if (player != null) {
+            var recipe = event.getCraftedRecipe();
+            int quantity = event.getQuantity();
+            player.sendMessage(Message.raw("Crafting " + quantity + " items..."));
+
+            // Optionally cancel the craft
+            // event.setCancelled(true);
+        }
+    }
+
+    @Override
+    public Query<EntityStore> getQuery() {
+        return Player.getComponentType();
+    }
+}
+```
+
+### Registration
+
+```java
+@Override
+protected void setup() {
+    // Listen for pre-craft (can cancel)
+    getEntityStoreRegistry().registerSystem(new CraftingSystem());
+
+    // Or listen for post-craft (after completion)
+    getEntityStoreRegistry().registerSystem(
+        new EntityEventSystem<EntityStore, CraftRecipeEvent.Post>(CraftRecipeEvent.Post.class) {
+            @Override
+            public void handle(int index, ArchetypeChunk<EntityStore> chunk,
+                               Store<EntityStore> store, CommandBuffer<EntityStore> buffer,
+                               CraftRecipeEvent.Post event) {
+                // Handle post-craft
+            }
+
+            @Override
+            public Query<EntityStore> getQuery() {
+                return Player.getComponentType();
+            }
+        }
+    );
 }
 ```
