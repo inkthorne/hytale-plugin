@@ -101,10 +101,23 @@ CompletableFuture<WorldChunk> getNonTickingChunkAsync(long chunkKey)
 
 ## Block Events
 
-Handle block interactions through the event system.
+Handle block interactions through the event system. All block events are ECS events and should be handled using `EntityEventSystem`.
+
+**Package:** `com.hypixel.hytale.server.core.event.events.ecs`
+
+### Event Summary
+
+| Class | Description | Cancellable |
+|-------|-------------|-------------|
+| `PlaceBlockEvent` | Block is placed | Yes |
+| `BreakBlockEvent` | Block is broken | Yes |
+| `DamageBlockEvent` | Block takes damage (mining progress) | Yes |
+| `UseBlockEvent.Pre` | Before block is used/interacted with | Yes |
+| `UseBlockEvent.Post` | After block is used/interacted with | No |
+
+---
 
 ### PlaceBlockEvent
-**Package:** `com.hypixel.hytale.server.core.event.events.ecs`
 
 Fired when a block is placed.
 
@@ -115,11 +128,14 @@ public class PlaceBlockEvent extends CancellableEcsEvent {
     void setTargetBlock(Vector3i position)
     RotationTuple getRotation()
     void setRotation(RotationTuple rotation)
+    boolean isCancelled()
+    void setCancelled(boolean)
 }
 ```
 
+---
+
 ### BreakBlockEvent
-**Package:** `com.hypixel.hytale.server.core.event.events.ecs`
 
 Fired when a block is broken.
 
@@ -129,18 +145,130 @@ public class BreakBlockEvent extends CancellableEcsEvent {
     Vector3i getTargetBlock()
     BlockType getBlockType()
     void setTargetBlock(Vector3i position)
+    boolean isCancelled()
+    void setCancelled(boolean)
 }
 ```
 
-### DamageBlockEvent
-**Package:** `com.hypixel.hytale.server.core.event.events.ecs`
+---
 
-Fired when a block takes damage (mining progress).
+### DamageBlockEvent
+
+Fired when a block takes damage (mining progress). This fires during the mining process before the block is actually broken.
+
+```java
+public class DamageBlockEvent extends CancellableEcsEvent {
+    ItemStack getItemInHand()
+    Vector3i getTargetBlock()
+    BlockType getBlockType()
+    boolean isCancelled()
+    void setCancelled(boolean)
+}
+```
+
+#### DamageBlockEvent Usage
+
+```java
+import com.hypixel.hytale.component.*;
+import com.hypixel.hytale.component.query.Query;
+import com.hypixel.hytale.component.system.EntityEventSystem;
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.event.events.ecs.DamageBlockEvent;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+
+public class DamageBlockEventSystem extends EntityEventSystem<EntityStore, DamageBlockEvent> {
+
+    public DamageBlockEventSystem() {
+        super(DamageBlockEvent.class);
+    }
+
+    @Override
+    public void handle(int index, ArchetypeChunk<EntityStore> chunk,
+                       Store<EntityStore> store, CommandBuffer<EntityStore> buffer,
+                       DamageBlockEvent event) {
+        Player player = chunk.getComponent(index, Player.getComponentType());
+        if (player != null) {
+            // Could log mining progress or modify damage
+            var blockType = event.getBlockType();
+            var pos = event.getTargetBlock();
+            System.out.println("Mining " + blockType + " at " + pos);
+        }
+    }
+
+    @Override
+    public Query<EntityStore> getQuery() {
+        return Player.getComponentType();
+    }
+}
+```
+
+---
 
 ### UseBlockEvent
-**Package:** `com.hypixel.hytale.server.core.event.events.ecs`
 
 Fired when a block is used/interacted with. Has `Pre` and `Post` variants.
+
+#### UseBlockEvent.Pre
+
+Fired before the block interaction is processed. Can be cancelled.
+
+```java
+public class UseBlockEvent.Pre extends CancellableEcsEvent {
+    Vector3i getTargetBlock()
+    BlockType getBlockType()
+    ItemStack getItemInHand()
+    boolean isCancelled()
+    void setCancelled(boolean)
+}
+```
+
+#### UseBlockEvent.Post
+
+Fired after the block interaction is processed. Cannot be cancelled.
+
+```java
+public class UseBlockEvent.Post extends EcsEvent {
+    Vector3i getTargetBlock()
+    BlockType getBlockType()
+    ItemStack getItemInHand()
+}
+```
+
+#### UseBlockEvent Usage
+
+```java
+import com.hypixel.hytale.component.*;
+import com.hypixel.hytale.component.query.Query;
+import com.hypixel.hytale.component.system.EntityEventSystem;
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.event.events.ecs.UseBlockEvent;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+
+public class UseBlockPreSystem extends EntityEventSystem<EntityStore, UseBlockEvent.Pre> {
+
+    public UseBlockPreSystem() {
+        super(UseBlockEvent.Pre.class);
+    }
+
+    @Override
+    public void handle(int index, ArchetypeChunk<EntityStore> chunk,
+                       Store<EntityStore> store, CommandBuffer<EntityStore> buffer,
+                       UseBlockEvent.Pre event) {
+        Player player = chunk.getComponent(index, Player.getComponentType());
+        if (player != null) {
+            // Prevent using certain block types
+            // event.setCancelled(true);
+            player.sendMessage(Message.raw("You used a block!"));
+        }
+    }
+
+    @Override
+    public Query<EntityStore> getQuery() {
+        return Player.getComponentType();
+    }
+}
 
 ---
 

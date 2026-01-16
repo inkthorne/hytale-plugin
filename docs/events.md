@@ -1,5 +1,20 @@
 # Events API
 
+This document covers the core event system. For specific event classes, see the relevant domain documentation:
+
+- **Player events** → [player.md](player.md)
+- **Block events** → [blocks.md](blocks.md)
+- **World/Chunk events** → [world.md](world.md)
+- **Entity events** → [entities.md](entities.md)
+- **Combat/Damage events** → [combat.md](combat.md)
+- **NPC/Sensor events** → [npc.md](npc.md)
+- **Adventure events** → [adventure.md](adventure.md)
+- **Permission events** → [permissions.md](permissions.md)
+- **Prefab events** → [prefabs.md](prefabs.md)
+- **Lifecycle events** → [plugin-lifecycle.md](plugin-lifecycle.md)
+
+---
+
 ## EventRegistry
 **Package:** `com.hypixel.hytale.server.core.event`
 
@@ -68,6 +83,8 @@ Listens only if no other handler processed the event:
                            Function<CompletableFuture<EventType>, CompletableFuture<EventType>> handler)
 ```
 
+---
+
 ## EventPriority
 **Package:** `com.hypixel.hytale.server.core.event`
 
@@ -99,69 +116,7 @@ getEventRegistry().register((short) 100, PlayerConnectEvent.class, event -> {
 });
 ```
 
-## Available Event Classes
-
-### Player Events
-**Package:** `com.hypixel.hytale.server.core.event.events.player`
-
-| Class | Description |
-|-------|-------------|
-| `PlayerConnectEvent` | Player connects to server |
-| `PlayerDisconnectEvent` | Player disconnects from server |
-| `PlayerReadyEvent` | Player is ready (fully loaded) |
-| `PlayerChatEvent` | Player sends a chat message |
-| `PlayerInteractEvent` | Player interacts with something |
-| `PlayerCraftEvent` | Player crafts an item |
-| `PlayerMouseButtonEvent` | Player mouse button input (⚠️ client-side only, does not fire on server) |
-| `PlayerMouseMotionEvent` | Player mouse movement |
-| `AddPlayerToWorldEvent` | Player added to a world |
-| `DrainPlayerFromWorldEvent` | Player removed from a world |
-| `PlayerSetupConnectEvent` | Player setup phase connect |
-| `PlayerSetupDisconnectEvent` | Player setup phase disconnect |
-
-### ECS/Gameplay Events
-**Package:** `com.hypixel.hytale.server.core.event.events.ecs`
-
-| Class | Description |
-|-------|-------------|
-| `UseBlockEvent` | Block is used (has `Pre` and `Post` variants) |
-| `BreakBlockEvent` | Block is broken |
-| `PlaceBlockEvent` | Block is placed |
-| `DamageBlockEvent` | Block takes damage |
-| `DropItemEvent` | Item is dropped (has `Drop` and `PlayerRequest` variants) |
-| `InteractivelyPickupItemEvent` | Item is picked up interactively |
-| `SwitchActiveSlotEvent` | Active inventory slot changes |
-| `ChangeGameModeEvent` | Game mode changes |
-| `CraftRecipeEvent` | Recipe is crafted (has `Pre` and `Post` variants) |
-| `DiscoverZoneEvent` | Zone is discovered |
-
-### Entity Events
-**Package:** `com.hypixel.hytale.server.core.event.events.entity`
-
-| Class | Description |
-|-------|-------------|
-| `EntityEvent` | Base entity event |
-| `EntityRemoveEvent` | Entity is removed |
-| `LivingEntityInventoryChangeEvent` | Living entity inventory changes |
-| `LivingEntityUseBlockEvent` | ~~Living entity uses a block~~ **DEPRECATED** - use `UseBlockEvent` instead |
-
-### Permission Events
-**Package:** `com.hypixel.hytale.server.core.event.events.permissions`
-
-| Class | Description |
-|-------|-------------|
-| `PlayerGroupEvent` | Player group changes (`Added`/`Removed`) |
-| `PlayerPermissionChangeEvent` | Player permissions change |
-| `GroupPermissionChangeEvent` | Group permissions change |
-
-### Server Lifecycle Events
-**Package:** `com.hypixel.hytale.server.core.event.events`
-
-| Class | Description |
-|-------|-------------|
-| `BootEvent` | Server boot |
-| `ShutdownEvent` | Server shutdown |
-| `PrepareUniverseEvent` | Universe preparation |
+---
 
 ## Keyed vs Non-Keyed Events
 
@@ -170,15 +125,20 @@ Some events are "keyed" (filtered by a key type like String or item type). Use:
 - `registerGlobal()` for keyed events when you want ALL events regardless of key (e.g., `PlayerInteractEvent`)
 - `register(EventClass, key, handler)` for keyed events filtered to a specific key
 
-**Keyed events** (use `registerGlobal` or provide a key):
+### Keyed Events
+Use `registerGlobal()` or provide a specific key:
 - `PlayerInteractEvent` (keyed by String)
 - `PlayerChatEvent` (keyed by String)
+- World events (keyed by String)
 
-**Non-keyed events** (use `register`):
+### Non-Keyed Events
+Use `register()`:
 - `PlayerConnectEvent`
 - `PlayerDisconnectEvent`
+- `AllWorldsLoadedEvent`
+- `BootEvent`, `ShutdownEvent`
 
-## Usage Example
+### Example
 ```java
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.event.events.player.PlayerConnectEvent;
@@ -195,12 +155,19 @@ protected void setup() {
     getEventRegistry().registerGlobal(PlayerInteractEvent.class, event -> {
         event.getPlayer().sendMessage(Message.raw("You interacted!"));
     });
+
+    // Keyed event: filter to specific key
+    getEventRegistry().register(PlayerInteractEvent.class, "specific_interaction_id", event -> {
+        event.getPlayer().sendMessage(Message.raw("Specific interaction!"));
+    });
 }
 ```
 
+---
+
 ## ECS Events (EntityEventSystem)
 
-ECS events like `PlaceBlockEvent` and `BreakBlockEvent` don't have direct player access.
+ECS events like `PlaceBlockEvent`, `BreakBlockEvent`, and `Damage` don't have direct player access.
 To handle them with entity context, create an `EntityEventSystem` and register it with `getEntityStoreRegistry()`.
 
 ### Creating an EntityEventSystem
@@ -253,101 +220,55 @@ protected void setup() {
 }
 ```
 
-## Damage Events (DamageEventSystem)
+### EntityEventSystem Methods
 
-Handle damage events when entities receive damage. Extend `DamageEventSystem` (not raw `EntityEventSystem`).
+| Method | Description |
+|--------|-------------|
+| `handle(index, chunk, store, buffer, event)` | Called when the event fires. Use `chunk.getComponent(index, type)` to access entity components. |
+| `getQuery()` | Return a Query to filter which entities this system handles. Return `null` to handle all, or a ComponentType to filter. |
 
-**Package:** `com.hypixel.hytale.server.core.modules.entity.damage`
+### Common ECS Events
 
-### Key Classes
+| Event | Package | Description |
+|-------|---------|-------------|
+| `PlaceBlockEvent` | `...event.events.ecs` | Block placed |
+| `BreakBlockEvent` | `...event.events.ecs` | Block broken |
+| `DamageBlockEvent` | `...event.events.ecs` | Block damaged |
+| `UseBlockEvent.Pre/Post` | `...event.events.ecs` | Block used |
+| `Damage` | `...modules.entity.damage` | Entity takes damage |
+| `ChunkSaveEvent` | `...world.events.ecs` | Chunk saved |
+| `ChunkUnloadEvent` | `...world.events.ecs` | Chunk unloaded |
+| `PrefabPasteEvent` | `...prefab.event` | Prefab pasted |
+| `KillFeedEvent.*` | `...damage.event` | Kill feed messages |
 
-| Class | Description |
-|-------|-------------|
-| `Damage` | ECS event fired when damage occurs. Extends `CancellableEcsEvent` |
-| `DamageEventSystem` | Abstract base class for handling Damage events |
-| `Damage.Source` | Interface for damage sources |
-| `Damage.EntitySource` | Source when damage comes from an entity (player/mob) |
-| `Damage.EnvironmentSource` | Source for environmental damage (fall, drowning) |
-| `Damage.ProjectileSource` | Source for projectile damage (arrows) |
-| `Damage.CommandSource` | Source for damage from commands |
-| `DamageDataComponent` | Component on entities that can receive damage |
+---
 
-### Damage Class Methods
+## Cancellable Events
+
+Many events implement `ICancellable` or extend `CancellableEcsEvent` and can be cancelled:
 
 ```java
-// Get who/what caused the damage
-Damage.Source getSource()
-
-// Get damage amount
-float getAmount()
-float getInitialAmount()
-
-// Get damage cause
-DamageCause getCause()
-int getDamageCauseIndex()
-
-// Cancellable
-boolean isCancelled()
-void setCancelled(boolean)
+getEventRegistry().registerGlobal(PlayerInteractEvent.class, event -> {
+    if (shouldPreventInteraction()) {
+        event.setCancelled(true);
+    }
+});
 ```
 
-### Important Notes
-
-1. **Event fires on VICTIM**: The Damage event is invoked on the entity receiving damage, not the attacker
-2. **Getting the attacker**: Use `Damage.EntitySource.getRef()` to get the attacker's entity reference
-3. **getQuery() required**: Must return a valid query (not null). Use `DamageDataComponent.getComponentType()`
-4. **Extend DamageEventSystem**: Use the provided base class, not raw `EntityEventSystem<EntityStore, Damage>`
-
-### Creating a Damage Handler
+### Checking Cancellation
 
 ```java
-import com.hypixel.hytale.component.*;
-import com.hypixel.hytale.component.query.Query;
-import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.entity.damage.DamageDataComponent;
-import com.hypixel.hytale.server.core.modules.entity.damage.Damage;
-import com.hypixel.hytale.server.core.modules.entity.damage.DamageEventSystem;
-import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-
-public class MyDamageSystem extends DamageEventSystem {
-
-    public MyDamageSystem() {
-        super();
-    }
-
-    @Override
-    public void handle(int index, ArchetypeChunk<EntityStore> chunk,
-                       Store<EntityStore> store, CommandBuffer<EntityStore> buffer,
-                       Damage event) {
-        // NOTE: This fires on the VICTIM entity (receiving damage)
-
-        Damage.Source source = event.getSource();
-        if (source instanceof Damage.EntitySource entitySource) {
-            // Get the attacker's entity reference
-            Ref<EntityStore> attackerRef = entitySource.getRef();
-
-            // Check if attacker is a player
-            Player attacker = store.getComponent(attackerRef, Player.getComponentType());
-            if (attacker != null) {
-                attacker.sendMessage(Message.raw("You hit something for " + event.getAmount() + " damage!"));
-            }
-        }
-    }
-
-    @Override
-    public Query<EntityStore> getQuery() {
-        // Match entities that can receive damage
-        return DamageDataComponent.getComponentType();
-    }
+if (event.isCancelled()) {
+    return; // Another handler already cancelled this
 }
 ```
 
-### Registering the Damage System
+---
 
-```java
-@Override
-protected void setup() {
-    getEntityStoreRegistry().registerSystem(new MyDamageSystem());
-}
-```
+## Event Registration Best Practices
+
+1. **Use appropriate priority** - Use `EARLY` if you need to cancel events before other handlers process them
+2. **Check cancellation** - If another handler might cancel the event, check `isCancelled()` first
+3. **Use keyed registration** - When you only care about specific event keys, use keyed registration for better performance
+4. **Prefer ECS systems** - For ECS events, always use `EntityEventSystem` rather than trying to work around it
+5. **Register in setup()** - Always register event handlers in your plugin's `setup()` method

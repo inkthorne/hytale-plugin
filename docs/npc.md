@@ -1,0 +1,172 @@
+# NPC API
+
+This document covers NPC loading events and AI sensor systems.
+
+## NPC Events
+
+Events related to NPC (Non-Player Character) loading and management.
+
+### AllNPCsLoadedEvent
+
+**Package:** `com.hypixel.hytale.server.npc`
+
+Fired once when all NPCs have finished loading. This is a **non-keyed event**.
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `getAllNPCs()` | `Int2ObjectMap<BuilderInfo>` | Map of all NPC definitions (by ID) |
+| `getLoadedNPCs()` | `Int2ObjectMap<BuilderInfo>` | Map of NPCs loaded in this batch |
+
+```java
+getEventRegistry().register(AllNPCsLoadedEvent.class, event -> {
+    var allNpcs = event.getAllNPCs();
+    System.out.println("Total NPCs loaded: " + allNpcs.size());
+});
+```
+
+### LoadedNPCEvent
+
+**Package:** `com.hypixel.hytale.server.spawning`
+
+Fired when an individual NPC definition is loaded. This is a **non-keyed event**.
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `getBuilderInfo()` | `BuilderInfo` | The NPC's builder information |
+
+```java
+getEventRegistry().register(LoadedNPCEvent.class, event -> {
+    var builderInfo = event.getBuilderInfo();
+    System.out.println("NPC loaded: " + builderInfo);
+});
+```
+
+---
+
+## Sensor Events
+
+Events and classes related to NPC AI sensors. Sensors detect entities and trigger NPC behaviors.
+
+**Package:** `com.hypixel.hytale.server.npc.corecomponents.world`
+
+### SensorEvent (Base Class)
+
+Abstract base class for sensor events. Extends `SensorBase`.
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `matches(Ref, Role, double, Store)` | `boolean` | Check if sensor matches given criteria |
+| `getSensorInfo()` | `InfoProvider` | Get sensor information provider |
+
+### SensorEntityEvent
+
+Entity-specific sensor event. Extends `SensorEvent`.
+
+Used for detecting entities within an NPC's sensor range.
+
+---
+
+## EventSearchType Enum
+
+**Package:** `com.hypixel.hytale.server.npc.corecomponents.world.SensorEvent`
+
+Controls how sensors search for targets.
+
+| Value | Description |
+|-------|-------------|
+| `PlayerFirst` | Search players before NPCs |
+| `PlayerOnly` | Only search for players |
+| `NpcFirst` | Search NPCs before players |
+| `NpcOnly` | Only search for NPCs |
+
+---
+
+## Builder Classes
+
+Sensor events use builder patterns for configuration.
+
+### BuilderSensorEvent
+
+**Package:** `com.hypixel.hytale.server.npc.corecomponents.world.builders`
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `getRange(BuilderSupport)` | `double` | Sensor detection range |
+| `getEventSearchType(BuilderSupport)` | `EventSearchType` | Target search strategy |
+| `getLockOnTargetSlot(BuilderSupport)` | `int` | Blackboard slot for locked target |
+
+### BuilderSensorEntityEvent
+
+Extends `BuilderSensorEvent` with additional entity-specific configuration:
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `getNPCGroup(BuilderSupport)` | `int` | NPC group filter |
+| `getEventType(BuilderSupport)` | `EntityEventType` | Entity event type to detect |
+| `isFlockOnly(BuilderSupport)` | `boolean` | Whether to only detect flock members |
+
+---
+
+## Sensor Usage Notes
+
+Sensors are primarily used internally by the NPC AI system. They are typically configured through NPC definition files rather than directly in plugin code. The events provide hooks for:
+
+- Detecting when NPCs notice players or other entities
+- Customizing target selection logic
+- Filtering sensor responses based on entity types
+
+### Example: Listen for NPC Loading
+
+```java
+import com.hypixel.hytale.server.npc.AllNPCsLoadedEvent;
+import com.hypixel.hytale.server.spawning.LoadedNPCEvent;
+
+@Override
+protected void setup() {
+    // Listen for individual NPC loads
+    getEventRegistry().register(LoadedNPCEvent.class, event -> {
+        var info = event.getBuilderInfo();
+        System.out.println("Loaded NPC: " + info);
+    });
+
+    // Listen for all NPCs finished loading
+    getEventRegistry().register(AllNPCsLoadedEvent.class, event -> {
+        var allNpcs = event.getAllNPCs();
+        System.out.println("All " + allNpcs.size() + " NPCs have been loaded");
+
+        // Iterate loaded NPCs
+        allNpcs.forEach((id, builderInfo) -> {
+            System.out.println("NPC ID " + id + ": " + builderInfo);
+        });
+    });
+}
+```
+
+---
+
+## Integration with AI Systems
+
+NPCs use sensors to detect and respond to entities in the world. The sensor system integrates with the NPC blackboard (memory) system to track targets.
+
+### Sensor Detection Flow
+
+1. Sensor scans for entities within range
+2. `EventSearchType` determines search priority (players vs NPCs)
+3. Matching entities trigger sensor events
+4. Target can be locked to a blackboard slot for AI decision-making
+
+### Example: Custom NPC Behavior on Player Detection
+
+While direct sensor manipulation is limited, you can respond to NPC-related events:
+
+```java
+@Override
+protected void setup() {
+    // Track when NPCs are loaded to log their configurations
+    getEventRegistry().register(AllNPCsLoadedEvent.class, event -> {
+        event.getAllNPCs().forEach((id, info) -> {
+            getLogger().atInfo().log("NPC %d loaded with config: %s", id, info);
+        });
+    });
+}
+```

@@ -247,3 +247,119 @@ store.removeEntity(entityRef, RemoveReason.DESPAWN);
 - Prefab IDs typically follow `namespace:name` format
 - Access PrefabStore through server or world context
 - Consider performance when spawning many entities; batch if possible
+
+---
+
+## Prefab Events
+
+Events related to prefab pasting and entity placement from prefabs.
+
+**Package:** `com.hypixel.hytale.server.core.prefab.event`
+
+### Event Summary
+
+| Class | Description | Cancellable |
+|-------|-------------|-------------|
+| `PrefabPasteEvent` | Prefab is being pasted into world (ECS) | Yes |
+| `PrefabPlaceEntityEvent` | Entity placed from prefab (ECS) | No |
+
+---
+
+### PrefabPasteEvent
+
+ECS event fired when a prefab is being pasted into the world. Extends `CancellableEcsEvent`.
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `getPrefabId()` | `int` | ID of the prefab being pasted |
+| `isPasteStart()` | `boolean` | True if this is the start of pasting, false if end |
+| `isCancelled()` | `boolean` | Whether the paste is cancelled |
+| `setCancelled(boolean)` | `void` | Cancel or uncancel the paste |
+
+---
+
+### PrefabPlaceEntityEvent
+
+ECS event fired when an entity is placed as part of a prefab. Extends `EcsEvent` (not cancellable).
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `getPrefabId()` | `int` | ID of the prefab containing this entity |
+| `getHolder()` | `Holder<EntityStore>` | Entity holder for the placed entity |
+
+---
+
+### Prefab Events Usage
+
+Prefab events are ECS events, so handle them using an `EntityEventSystem`:
+
+```java
+import com.hypixel.hytale.component.*;
+import com.hypixel.hytale.component.query.Query;
+import com.hypixel.hytale.component.system.EntityEventSystem;
+import com.hypixel.hytale.server.core.prefab.event.PrefabPasteEvent;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+
+public class PrefabPasteSystem extends EntityEventSystem<EntityStore, PrefabPasteEvent> {
+
+    public PrefabPasteSystem() {
+        super(PrefabPasteEvent.class);
+    }
+
+    @Override
+    public void handle(int index, ArchetypeChunk<EntityStore> chunk,
+                       Store<EntityStore> store, CommandBuffer<EntityStore> buffer,
+                       PrefabPasteEvent event) {
+        if (event.isPasteStart()) {
+            System.out.println("Starting to paste prefab: " + event.getPrefabId());
+        } else {
+            System.out.println("Finished pasting prefab: " + event.getPrefabId());
+        }
+
+        // Optionally cancel the paste
+        // event.setCancelled(true);
+    }
+
+    @Override
+    public Query<EntityStore> getQuery() {
+        return null; // Or a specific component type
+    }
+}
+```
+
+```java
+import com.hypixel.hytale.component.*;
+import com.hypixel.hytale.component.query.Query;
+import com.hypixel.hytale.component.system.EntityEventSystem;
+import com.hypixel.hytale.server.core.prefab.event.PrefabPlaceEntityEvent;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+
+public class PrefabPlaceEntitySystem extends EntityEventSystem<EntityStore, PrefabPlaceEntityEvent> {
+
+    public PrefabPlaceEntitySystem() {
+        super(PrefabPlaceEntityEvent.class);
+    }
+
+    @Override
+    public void handle(int index, ArchetypeChunk<EntityStore> chunk,
+                       Store<EntityStore> store, CommandBuffer<EntityStore> buffer,
+                       PrefabPlaceEntityEvent event) {
+        var holder = event.getHolder();
+        System.out.println("Entity placed from prefab " + event.getPrefabId() + ": " + holder);
+    }
+
+    @Override
+    public Query<EntityStore> getQuery() {
+        return null; // Or a specific component type
+    }
+}
+```
+
+### Registration
+
+```java
+@Override
+protected void setup() {
+    getEntityStoreRegistry().registerSystem(new PrefabPasteSystem());
+    getEntityStoreRegistry().registerSystem(new PrefabPlaceEntitySystem());
+}

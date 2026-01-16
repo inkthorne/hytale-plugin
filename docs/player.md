@@ -1,0 +1,341 @@
+# Player API
+
+This document covers player-related events and messaging APIs.
+
+## Message
+**Package:** `com.hypixel.hytale.server.core`
+
+Create and format chat messages.
+
+### Static Factory Methods
+```java
+Message.raw(String text)           // Plain text message
+Message.translation(String key)    // Translated message (i18n key)
+Message.parse(String text)         // Parse formatted text
+Message.empty()                    // Empty message
+Message.join(Message... messages)  // Concatenate messages
+```
+
+### Formatting (Fluent API)
+All formatting methods return `Message` for chaining:
+```java
+Message bold(boolean bold)
+Message italic(boolean italic)
+Message monospace(boolean mono)
+Message color(String hexColor)       // e.g., "#FF0000"
+Message color(Color awtColor)
+Message link(String url)
+```
+
+### Parameters (for translations)
+```java
+Message param(String key, String value)
+Message param(String key, boolean value)
+Message param(String key, int value)
+Message param(String key, long value)
+Message param(String key, float value)
+Message param(String key, double value)
+Message param(String key, Message value)
+```
+
+### Composition
+```java
+Message insert(Message child)
+Message insert(String text)
+Message insertAll(Message... children)
+Message insertAll(List<Message> children)
+```
+
+### Getters
+```java
+String getRawText()
+String getMessageId()
+String getColor()
+List<Message> getChildren()
+String getAnsiMessage()
+FormattedMessage getFormattedMessage()
+```
+
+### Simple Message
+```java
+playerRef.sendMessage(Message.raw("Hello, World!"));
+```
+
+### Formatted Message
+```java
+Message msg = Message.raw("Important: ")
+    .bold(true)
+    .color("#FF0000")
+    .insert(Message.raw("You have mail!").italic(true));
+playerRef.sendMessage(msg);
+```
+
+### Translation with Parameters
+```java
+Message msg = Message.translation("welcome.player")
+    .param("name", playerRef.getUsername())
+    .param("count", 5);
+playerRef.sendMessage(msg);
+```
+
+### Joining Messages
+```java
+Message combined = Message.join(
+    Message.raw("Score: ").bold(true),
+    Message.raw("100").color("#00FF00"),
+    Message.raw(" points")
+);
+```
+
+### Broadcast to World
+```java
+world.sendMessage(Message.raw("Server announcement!"));
+```
+
+---
+
+## Player Events
+
+**Package:** `com.hypixel.hytale.server.core.event.events.player`
+
+Events related to player connections, interactions, and input.
+
+### Event Summary
+
+| Class | Description | Keyed |
+|-------|-------------|-------|
+| `PlayerConnectEvent` | Player connects to server | No |
+| `PlayerDisconnectEvent` | Player disconnects from server | No |
+| `PlayerReadyEvent` | Player is ready (fully loaded) | No |
+| `PlayerChatEvent` | Player sends a chat message | Yes (String) |
+| `PlayerInteractEvent` | Player interacts with something | Yes (String) |
+| `PlayerCraftEvent` | Player crafts an item | No |
+| `PlayerMouseButtonEvent` | Player mouse button input | No |
+| `PlayerMouseMotionEvent` | Player mouse movement | No |
+| `AddPlayerToWorldEvent` | Player added to a world | No |
+| `DrainPlayerFromWorldEvent` | Player removed from a world | No |
+| `PlayerSetupConnectEvent` | Player setup phase connect | No |
+| `PlayerSetupDisconnectEvent` | Player setup phase disconnect | No |
+
+**Note:** `PlayerMouseButtonEvent` is client-side only and does not fire on the server.
+
+### Registration Example
+
+```java
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.event.events.player.PlayerConnectEvent;
+
+@Override
+protected void setup() {
+    // Non-keyed event: use register()
+    getEventRegistry().register(PlayerConnectEvent.class, event -> {
+        event.getPlayerRef().sendMessage(Message.raw("Welcome!"));
+    });
+}
+```
+
+---
+
+## PlayerInteractEvent
+
+**Package:** `com.hypixel.hytale.server.core.event.events.player`
+
+Fired when a player interacts with blocks, entities, items, or triggers game actions. This is a **keyed event** where the key is the interaction ID string.
+
+### Methods
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `getActionType()` | `InteractionType` | The type of interaction performed |
+| `getItemInHand()` | `ItemStack` | The item the player was holding |
+| `getTargetBlock()` | `Vector3i` | Block position interacted with (may be null) |
+| `getTargetEntity()` | `Entity` | Entity interacted with (may be null) |
+| `getTargetRef()` | `Ref<EntityStore>` | Entity reference for ECS access |
+| `getClientUseTime()` | `long` | Client-side timestamp of the interaction |
+| `getPlayer()` | `Player` | The player who triggered the interaction |
+| `isCancelled()` | `boolean` | Whether the event is cancelled |
+| `setCancelled(boolean)` | `void` | Cancel or uncancel the event |
+
+### Registration
+
+Since `PlayerInteractEvent` is keyed by String (interaction ID), use `registerGlobal()` to catch all interactions:
+
+```java
+getEventRegistry().registerGlobal(PlayerInteractEvent.class, event -> {
+    // Handle all interactions
+});
+```
+
+Or register for a specific interaction key:
+
+```java
+getEventRegistry().register(PlayerInteractEvent.class, "some_interaction_id", event -> {
+    // Handle specific interaction
+});
+```
+
+---
+
+## InteractionType
+
+**Package:** `com.hypixel.hytale.protocol`
+
+Enum representing the type of interaction in a `PlayerInteractEvent`. Use `event.getActionType()` to get the interaction type.
+
+### Enum Values by Category
+
+**Player Input Actions:**
+| Value | Description |
+|-------|-------------|
+| `Primary` | Primary action (left click / attack) |
+| `Secondary` | Secondary action (right click / use) |
+| `Ability1` | First ability slot |
+| `Ability2` | Second ability slot |
+| `Ability3` | Third ability slot |
+
+**Object Interactions:**
+| Value | Description |
+|-------|-------------|
+| `Use` | Using an object |
+| `Pick` | Picking/selecting a target |
+| `Pickup` | Picking up an item |
+
+**Collision Events:**
+| Value | Description |
+|-------|-------------|
+| `CollisionEnter` | Entity enters collision |
+| `CollisionLeave` | Entity leaves collision |
+| `Collision` | Ongoing collision |
+
+**Inventory Events:**
+| Value | Description |
+|-------|-------------|
+| `SwapTo` | Swapping to a slot |
+| `SwapFrom` | Swapping from a slot |
+| `Held` | Item held in main hand |
+| `HeldOffhand` | Item held in offhand |
+| `Equipped` | Item equipped |
+
+**Projectile Events:**
+| Value | Description |
+|-------|-------------|
+| `ProjectileSpawn` | Projectile created |
+| `ProjectileHit` | Projectile hit target |
+| `ProjectileMiss` | Projectile missed |
+| `ProjectileBounce` | Projectile bounced |
+
+**Other Events:**
+| Value | Description |
+|-------|-------------|
+| `Death` | Entity death |
+| `Dodge` | Dodge action |
+| `GameModeSwap` | Game mode changed |
+| `EntityStatEffect` | Stat effect applied |
+| `Wielding` | Wielding state change |
+
+---
+
+## PlayerInteractEvent Usage Examples
+
+### Detecting Primary Attacks
+
+```java
+import com.hypixel.hytale.protocol.InteractionType;
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.event.events.player.PlayerInteractEvent;
+
+@Override
+protected void setup() {
+    getEventRegistry().registerGlobal(PlayerInteractEvent.class, event -> {
+        if (event.getActionType() == InteractionType.Primary) {
+            event.getPlayer().sendMessage(Message.raw("You attacked!"));
+        }
+    });
+}
+```
+
+### Checking Held Item During Interaction
+
+```java
+getEventRegistry().registerGlobal(PlayerInteractEvent.class, event -> {
+    var item = event.getItemInHand();
+    if (item != null) {
+        event.getPlayer().sendMessage(
+            Message.raw("Interacted while holding: " + item.getItemType().getName())
+        );
+    }
+});
+```
+
+### Cancelling Interactions
+
+```java
+getEventRegistry().registerGlobal(PlayerInteractEvent.class, event -> {
+    // Prevent all secondary (right-click) actions
+    if (event.getActionType() == InteractionType.Secondary) {
+        event.setCancelled(true);
+        event.getPlayer().sendMessage(Message.raw("Secondary actions disabled!"));
+    }
+});
+```
+
+### Filtering Multiple Interaction Types
+
+```java
+import java.util.Set;
+
+@Override
+protected void setup() {
+    Set<InteractionType> combatActions = Set.of(
+        InteractionType.Primary,
+        InteractionType.Ability1,
+        InteractionType.Ability2,
+        InteractionType.Ability3
+    );
+
+    getEventRegistry().registerGlobal(PlayerInteractEvent.class, event -> {
+        if (combatActions.contains(event.getActionType())) {
+            // Handle combat-related interactions
+            event.getPlayer().sendMessage(Message.raw("Combat action: " + event.getActionType()));
+        }
+    });
+}
+```
+
+### Detecting Projectile Hits
+
+```java
+getEventRegistry().registerGlobal(PlayerInteractEvent.class, event -> {
+    if (event.getActionType() == InteractionType.ProjectileHit) {
+        var targetEntity = event.getTargetEntity();
+        if (targetEntity != null) {
+            event.getPlayer().sendMessage(
+                Message.raw("Your projectile hit an entity!")
+            );
+        }
+    }
+});
+```
+
+---
+
+## Complete Usage Example
+
+```java
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.event.events.player.PlayerConnectEvent;
+import com.hypixel.hytale.server.core.event.events.player.PlayerInteractEvent;
+
+@Override
+protected void setup() {
+    // Non-keyed event: use register()
+    getEventRegistry().register(PlayerConnectEvent.class, event -> {
+        event.getPlayerRef().sendMessage(Message.raw("Welcome!"));
+    });
+
+    // Keyed event: use registerGlobal() to catch ALL interactions
+    getEventRegistry().registerGlobal(PlayerInteractEvent.class, event -> {
+        event.getPlayer().sendMessage(Message.raw("You interacted!"));
+    });
+}
+```

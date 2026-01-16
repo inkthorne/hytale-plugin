@@ -377,3 +377,167 @@ public void applyKnockback(Velocity velocity, Vector3d direction, double force) 
     VelocityConfig config = new VelocityConfig();
     velocity.addInstruction(knockback, config, ChangeVelocityType.Add);
 }
+```
+
+---
+
+## Entity Events
+
+**Package:** `com.hypixel.hytale.server.core.event.events.entity`
+
+Events related to entity lifecycle and inventory.
+
+### Event Summary
+
+| Class | Description |
+|-------|-------------|
+| `EntityEvent` | Base entity event |
+| `EntityRemoveEvent` | Entity is removed |
+| `LivingEntityInventoryChangeEvent` | Living entity inventory changes |
+
+**Package:** `com.hypixel.hytale.server.core.event.events.ecs`
+
+| Class | Description |
+|-------|-------------|
+| `DropItemEvent` | Item is dropped (has `Drop` and `PlayerRequest` variants) |
+| `InteractivelyPickupItemEvent` | Item is picked up interactively |
+| `SwitchActiveSlotEvent` | Active inventory slot changes |
+
+---
+
+### EntityEvent
+
+**Package:** `com.hypixel.hytale.server.core.event.events.entity`
+
+Base class for entity-related events.
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `getEntity()` | `Entity` | The entity this event relates to |
+
+---
+
+### EntityRemoveEvent
+
+**Package:** `com.hypixel.hytale.server.core.event.events.entity`
+
+Fired when an entity is removed from the world.
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `getEntity()` | `Entity` | The entity being removed |
+| `getRemoveReason()` | `RemoveReason` | Why the entity is being removed |
+
+---
+
+### LivingEntityInventoryChangeEvent
+
+**Package:** `com.hypixel.hytale.server.core.event.events.entity`
+
+Fired when a living entity's inventory changes.
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `getEntity()` | `LivingEntity` | The entity whose inventory changed |
+| `getInventory()` | `Inventory` | The updated inventory |
+
+---
+
+### DropItemEvent
+
+**Package:** `com.hypixel.hytale.server.core.event.events.ecs`
+
+ECS event fired when an item is dropped. Has variants:
+- `DropItemEvent.Drop` - General item drop
+- `DropItemEvent.PlayerRequest` - Player-initiated drop
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `getItemStack()` | `ItemStack` | The item being dropped |
+| `getPosition()` | `Vector3d` | Drop position |
+
+---
+
+### InteractivelyPickupItemEvent
+
+**Package:** `com.hypixel.hytale.server.core.event.events.ecs`
+
+ECS event fired when an item is picked up interactively (e.g., player collecting items).
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `getItemStack()` | `ItemStack` | The item being picked up |
+
+---
+
+### SwitchActiveSlotEvent
+
+**Package:** `com.hypixel.hytale.server.core.event.events.ecs`
+
+ECS event fired when the active inventory slot changes (e.g., player switching hotbar slot).
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `getPreviousSlot()` | `int` | The previous active slot |
+| `getNewSlot()` | `int` | The new active slot |
+
+---
+
+### Entity Events Usage Example
+
+```java
+import com.hypixel.hytale.server.core.event.events.entity.EntityRemoveEvent;
+
+@Override
+protected void setup() {
+    // Listen for entity removals
+    getEventRegistry().registerGlobal(EntityRemoveEvent.class, event -> {
+        var entity = event.getEntity();
+        var reason = event.getRemoveReason();
+        System.out.println("Entity removed: " + entity + " reason: " + reason);
+    });
+
+    // Listen for inventory changes
+    getEventRegistry().registerGlobal(LivingEntityInventoryChangeEvent.class, event -> {
+        var entity = event.getEntity();
+        System.out.println("Inventory changed for: " + entity);
+    });
+}
+```
+
+### ECS Entity Events Example
+
+For ECS events, use an `EntityEventSystem`:
+
+```java
+import com.hypixel.hytale.component.*;
+import com.hypixel.hytale.component.query.Query;
+import com.hypixel.hytale.component.system.EntityEventSystem;
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.event.events.ecs.SwitchActiveSlotEvent;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+
+public class SlotSwitchSystem extends EntityEventSystem<EntityStore, SwitchActiveSlotEvent> {
+
+    public SlotSwitchSystem() {
+        super(SwitchActiveSlotEvent.class);
+    }
+
+    @Override
+    public void handle(int index, ArchetypeChunk<EntityStore> chunk,
+                       Store<EntityStore> store, CommandBuffer<EntityStore> buffer,
+                       SwitchActiveSlotEvent event) {
+        Player player = chunk.getComponent(index, Player.getComponentType());
+        if (player != null) {
+            player.sendMessage(Message.raw(
+                "Switched from slot " + event.getPreviousSlot() + " to " + event.getNewSlot()
+            ));
+        }
+    }
+
+    @Override
+    public Query<EntityStore> getQuery() {
+        return Player.getComponentType();
+    }
+}

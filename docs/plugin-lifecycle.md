@@ -112,3 +112,149 @@ public class MyPlugin extends JavaPlugin {
     }
 }
 ```
+
+---
+
+## Server Lifecycle Events
+
+**Package:** `com.hypixel.hytale.server.core.event.events`
+
+Events related to server lifecycle.
+
+| Class | Description |
+|-------|-------------|
+| `BootEvent` | Server boot has completed |
+| `ShutdownEvent` | Server is shutting down |
+| `PrepareUniverseEvent` | Universe preparation phase |
+
+### Usage Example
+
+```java
+import com.hypixel.hytale.server.core.event.events.BootEvent;
+import com.hypixel.hytale.server.core.event.events.ShutdownEvent;
+
+@Override
+protected void setup() {
+    // Listen for server boot completion
+    getEventRegistry().register(BootEvent.class, event -> {
+        getLogger().atInfo().log("Server has finished booting!");
+    });
+
+    // Listen for server shutdown
+    getEventRegistry().register(ShutdownEvent.class, event -> {
+        getLogger().atInfo().log("Server is shutting down, saving data...");
+    });
+}
+```
+
+---
+
+## Plugin Events
+
+**Package:** `com.hypixel.hytale.server.core.plugin.event`
+
+Events related to plugin lifecycle. These are **keyed by plugin class** (`Class<? extends PluginBase>`).
+
+### Event Summary
+
+| Class | Description |
+|-------|-------------|
+| `PluginEvent` | Base class for plugin lifecycle events |
+| `PluginSetupEvent` | Plugin setup has completed |
+
+---
+
+### PluginEvent (Base Class)
+
+Abstract base class for plugin-related events. Keyed by plugin class.
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `getPlugin()` | `PluginBase` | The plugin this event relates to |
+
+---
+
+### PluginSetupEvent
+
+Fired when a plugin's setup has completed. Extends `PluginEvent`.
+
+### Constructor
+
+```java
+public PluginSetupEvent(PluginBase plugin)
+```
+
+### Inherited Methods
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `getPlugin()` | `PluginBase` | The plugin that completed setup |
+
+### Usage Example
+
+```java
+import com.hypixel.hytale.server.core.plugin.event.PluginSetupEvent;
+
+@Override
+protected void setup() {
+    // Listen for when any plugin completes setup
+    getEventRegistry().registerGlobal(PluginSetupEvent.class, event -> {
+        System.out.println("Plugin setup completed: " + event.getPlugin());
+    });
+
+    // Listen for a specific plugin's setup (keyed by plugin class)
+    getEventRegistry().register(PluginSetupEvent.class, MyPlugin.class, event -> {
+        System.out.println("MyPlugin setup completed!");
+    });
+}
+```
+
+---
+
+## Complete Lifecycle Example
+
+```java
+import com.hypixel.hytale.server.core.event.events.BootEvent;
+import com.hypixel.hytale.server.core.event.events.ShutdownEvent;
+import com.hypixel.hytale.server.core.plugin.JavaPlugin;
+import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.core.plugin.event.PluginSetupEvent;
+
+public class MyPlugin extends JavaPlugin {
+
+    public MyPlugin(JavaPluginInit init) {
+        super(init);
+    }
+
+    @Override
+    protected void setup() {
+        // Register commands
+        getCommandRegistry().registerCommand(new MyCommand());
+
+        // Register lifecycle event listeners
+        getEventRegistry().register(BootEvent.class, event -> {
+            getLogger().atInfo().log("Server boot complete - initializing plugin features");
+            // Initialize features that require the server to be fully booted
+        });
+
+        getEventRegistry().register(ShutdownEvent.class, event -> {
+            getLogger().atInfo().log("Saving plugin data before shutdown...");
+            // Save any persistent data
+        });
+
+        // Listen for other plugins completing setup
+        getEventRegistry().registerGlobal(PluginSetupEvent.class, event -> {
+            if (event.getPlugin() != this) {
+                getLogger().atInfo().log("Another plugin finished setup: " + event.getPlugin().getName());
+            }
+        });
+
+        getLogger().atInfo().log("Plugin setup complete!");
+    }
+
+    @Override
+    protected void shutdown() {
+        getLogger().atInfo().log("Plugin shutdown method called");
+        // Clean up plugin resources
+    }
+}
