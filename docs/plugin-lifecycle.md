@@ -36,9 +36,13 @@ Base class providing all plugin functionality.
 ### Lifecycle Methods
 Override these to hook into plugin lifecycle:
 ```java
-protected void setup();     // Register commands, events, etc.
-protected void start();     // Called after setup
-public CompletableFuture<Void> preLoad();  // Async pre-loading
+protected void setup();                       // Register commands, events, etc.
+protected void setup0();                      // Internal setup (called by framework)
+protected void start();                       // Called after setup
+protected void start0();                      // Internal start (called by framework)
+public CompletableFuture<Void> preLoad();     // Async pre-loading
+protected void shutdown();                    // Clean up resources
+protected void shutdown0(boolean graceful);   // Internal shutdown
 ```
 
 ### Registries (from PluginBase)
@@ -54,6 +58,14 @@ getEntityStoreRegistry()   // ComponentRegistryProxy<EntityStore>
 getChunkStoreRegistry()    // ComponentRegistryProxy<ChunkStore>
 getClientFeatureRegistry() // ClientFeatureRegistry
 ```
+
+### Configuration
+```java
+// Load configuration from file with default fallback
+<T> T withConfig(BuilderCodec<T> codec)
+```
+
+See [Codecs Documentation](codecs.md) for BuilderCodec details.
 
 ### Utility Methods
 ```java
@@ -96,7 +108,7 @@ public class MyPlugin extends JavaPlugin {
     @Override
     protected void setup() {
         getCommandRegistry().registerCommand(new MyCommand());
-        getLogger().info("Plugin setup complete!");
+        getLogger().atInfo().log("Plugin setup complete!");
     }
 }
 ```

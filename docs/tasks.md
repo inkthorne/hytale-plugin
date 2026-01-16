@@ -36,7 +36,7 @@ protected void setup() {
     ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     ScheduledFuture<Void> future = scheduler.schedule(() -> {
         // Runs after 5 seconds
-        getLogger().info("Delayed task executed");
+        getLogger().atInfo().log("Delayed task executed");
         return null;
     }, 5, TimeUnit.SECONDS);
 
@@ -51,10 +51,10 @@ CompletableFuture<Void> task = CompletableFuture
         // Do work
     })
     .thenRun(() -> {
-        getLogger().info("Task completed!");
+        getLogger().atInfo().log("Task completed!");
     })
     .exceptionally(ex -> {
-        getLogger().error("Task failed", ex);
+        getLogger().atSevere().withCause(ex).log("Task failed");
         return null;
     });
 

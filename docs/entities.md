@@ -12,8 +12,14 @@ Entity (abstract, implements Component<EntityStore>)
 
 Lightweight reference to a player, passed to commands. Use this for sending messages.
 
+**Implements:** `Component<EntityStore>`, `MetricProvider`, `IMessageReceiver`
+
 ### Key Methods
 ```java
+// Constructor
+PlayerRef(Holder<EntityStore> holder, UUID uuid, String username, String language,
+          PacketHandler handler, ChunkTracker tracker)
+
 // Messaging
 void sendMessage(Message msg)
 
@@ -37,17 +43,28 @@ Holder<EntityStore> getHolder()
 
 // Network
 PacketHandler getPacketHandler()
+ChunkTracker getChunkTracker()
 void referToServer(String host, int port)
 void referToServer(String host, int port, byte[] data)
+
+// Player Management
+HiddenPlayersManager getHiddenPlayersManager()
+
+// Lifecycle
+void addToStore()
+void removeFromStore()
 
 // Component type for ECS access
 static ComponentType<EntityStore, PlayerRef> getComponentType()
 ```
 
 ## Player
-**Package:** `com.hypixel.hytale.server.core.entity.entities`
+**Package:** `com.hypixel.hytale.server.core.entity.entities.player`
 
 Full player entity with all game state.
+
+**Extends:** `LivingEntity`
+**Implements:** `CommandSender`, `PermissionHolder`, `MetricProvider`
 
 ### Key Methods
 ```java
@@ -59,14 +76,17 @@ boolean hasPermission(String permission, boolean defaultValue)
 // Identity
 String getDisplayName()
 PlayerRef getPlayerRef()
+PacketHandler getPlayerConnection()
 
 // Game State
 GameMode getGameMode()
 static void setGameMode(Ref<EntityStore> ref, GameMode mode, ComponentAccessor<EntityStore> accessor)
+static void initGameMode(Ref<EntityStore> ref, ComponentAccessor<EntityStore> accessor)
 boolean isFirstSpawn()
 void setFirstSpawn(boolean firstSpawn)
 
 // Inventory
+Inventory getInventory()
 Inventory setInventory(Inventory inventory)
 void sendInventory()
 
@@ -74,6 +94,9 @@ void sendInventory()
 void moveTo(Ref<EntityStore> ref, double x, double y, double z, ComponentAccessor<EntityStore> accessor)
 void addLocationChange(Ref<EntityStore> ref, double x, double y, double z, ComponentAccessor<EntityStore> accessor)
 static Transform getRespawnPosition(Ref<EntityStore> ref, String spawnPoint, ComponentAccessor<EntityStore> accessor)
+void applyMovementStates(Ref<EntityStore> ref, SavedMovementStates saved, MovementStates current, ComponentAccessor<EntityStore> accessor)
+void resetVelocity(Velocity velocity)
+void processVelocitySample()
 
 // Managers
 WindowManager getWindowManager()
@@ -95,6 +118,20 @@ long getSinceLastSpawnNanos()
 // Mounting
 int getMountEntityId()
 void setMountEntityId(int id)
+
+// Item Durability
+boolean canDecreaseItemStackDurability()
+boolean canApplyItemStackPenalties()
+void updateItemStackDurability()
+
+// Block Processing
+void configTriggerBlockProcessing(boolean trigger, boolean process, CollisionResultComponent result)
+
+// Persistence
+void saveConfig(World world, Holder<EntityStore> holder)
+
+// Connection State
+boolean isWaitingForClientReady()
 
 // Component type for ECS access
 static ComponentType<EntityStore, Player> getComponentType()
