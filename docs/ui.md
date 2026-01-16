@@ -84,15 +84,27 @@ UICommandBuilder remove(String elementId)           // Remove element from DOM
 
 #### Append Operations
 ```java
-UICommandBuilder append(String xml)                          // Append to root
-UICommandBuilder append(String elementId, String xml)        // Append to element
-UICommandBuilder appendInline(String elementId, String xml)  // Append inline
+UICommandBuilder append(String uiFilePath)                            // Append .ui file to root
+UICommandBuilder append(String elementSelector, String uiFilePath)    // Append .ui file to element
+UICommandBuilder appendInline(String elementSelector, String dslMarkup)  // Append inline DSL markup
 ```
+
+**File paths** are relative to `resources/Common/UI/Custom/`. Examples:
+- `append("MyUI.ui")` loads `Common/UI/Custom/MyUI.ui`
+- `append("Pages/MyPage.ui")` loads `Common/UI/Custom/Pages/MyPage.ui`
+- `append("#container", "Components/Button.ui")` appends to element with id "container"
+
+**Inline DSL markup** uses Hytale's curly-brace format (NOT XML):
+```java
+appendInline("#container", "Label { Text: \"Hello\"; Style: (Alignment: Center); }");
+```
+
+**Note:** The selector for `appendInline()` must reference an existing element in the UI. Load a base `.ui` file first with `append()`, then use `appendInline()` to add content to named containers within it.
 
 #### Insert Operations
 ```java
-UICommandBuilder insertBefore(String elementId, String xml)
-UICommandBuilder insertBeforeInline(String elementId, String xml)
+UICommandBuilder insertBefore(String elementSelector, String uiFilePath)
+UICommandBuilder insertBeforeInline(String elementSelector, String dslMarkup)
 ```
 
 #### Set Property Operations
@@ -214,7 +226,7 @@ HotbarManager hotbar = player.getHotbarManager();
 ---
 
 ### WindowManager
-**Package:** `com.hypixel.hytale.server.core.ui`
+**Package:** `com.hypixel.hytale.server.core.entity.entities.player.windows`
 
 Manage player windows (inventory, crafting, etc.).
 
@@ -345,7 +357,7 @@ windows.closeWindow(slotId);
 ---
 
 ### PageManager
-**Package:** `com.hypixel.hytale.server.core.ui`
+**Package:** `com.hypixel.hytale.server.core.entity.entities.player.pages`
 
 Manage player pages (full-screen UIs).
 
@@ -443,24 +455,22 @@ void onDismiss(Ref<EntityStore> ref, Store<EntityStore> store)
 #### Subclasses
 | Class | Description |
 |-------|-------------|
-| `BasicCustomUIPage` | Basic custom page implementation |
-| `InteractiveCustomUIPage` | Interactive custom page with event handling |
+| `BasicCustomUIPage` | Basic custom page - use this for display-only pages |
+| `InteractiveCustomUIPage<T>` | Interactive page with typed event handling |
+
+**Important:** Use `BasicCustomUIPage` (not `CustomUIPage` directly) for most custom pages.
 
 #### Usage Example
 ```java
-public class MyCustomPage extends CustomUIPage {
+public class MyCustomPage extends BasicCustomUIPage {
     public MyCustomPage(PlayerRef playerRef) {
-        super(playerRef, CustomPageLifetime.UntilDismissed);
+        super(playerRef, CustomPageLifetime.CanDismiss);
     }
 
     @Override
-    public void build(Ref<EntityStore> ref, UICommandBuilder cmd,
-                      UIEventBuilder events, Store<EntityStore> store) {
-        // Build UI
-        cmd.append("<panel id='main'><text>Hello World</text></panel>");
-
-        // Bind events
-        events.addEventBinding(CustomUIEventBindingType.Activating, "close-btn");
+    public void build(UICommandBuilder cmd) {
+        // Load UI from .ui file (path relative to Common/UI/Custom/)
+        cmd.append("MyCustomPage.ui");
     }
 
     @Override
@@ -470,14 +480,57 @@ public class MyCustomPage extends CustomUIPage {
 }
 
 // Open the custom page
+Player player = store.getComponent(ref, Player.getComponentType());
 PageManager pages = player.getPageManager();
 pages.openCustomPage(ref, store, new MyCustomPage(playerRef));
 ```
 
+#### .ui File Requirements
+
+1. **Location:** `resources/Common/UI/Custom/MyCustomPage.ui`
+2. **Manifest:** Must include `"IncludesAssetPack": true`
+3. **Structure:** Must have an anonymous root Group:
+
+```
+Group {
+    LayoutMode: Center;
+
+    Group #MyPanel {
+        Anchor: (Width: 300, Height: 100);
+        Background: #000000(0.8);
+
+        Label #MyLabel {
+            Style: (FontSize: 24, TextColor: #00ff00, Alignment: Center);
+            Text: "Hello World";
+        }
+    }
+}
+```
+
+**Note:** The root `Group` must NOT have an ID. Named elements go inside it.
+
+#### LayoutMode Values
+
+| Value | Description |
+|-------|-------------|
+| `Top` | Stack children from top downward |
+| `Left` | Stack children from left to right |
+| `Middle` | Vertically center children |
+| `Center` | Horizontally center children |
+| `Bottom` | Stack children from bottom upward |
+| `Right` | Stack children from right to left |
+| `TopScrolling` | Top layout with vertical scrolling |
+| `Full` | Fill entire parent area |
+| `CenterMiddle` | Center both horizontally and vertically |
+| `MiddleCenter` | Center both horizontally and vertically (alternate) |
+| `LeftCenterWrap` | Left-aligned with center wrapping |
+
+**Note:** `Top` and `Left` are the most commonly used values for stacking layouts.
+
 ---
 
 ### HudManager
-**Package:** `com.hypixel.hytale.server.core.ui`
+**Package:** `com.hypixel.hytale.server.core.entity.entities.player.hud`
 
 Manage HUD visibility and custom HUD elements.
 
@@ -570,7 +623,7 @@ hud.showHudComponents(playerRef, HudComponent.Stamina);
 ---
 
 ### HotbarManager
-**Package:** `com.hypixel.hytale.server.core.ui`
+**Package:** `com.hypixel.hytale.server.core.entity.entities.player`
 
 Manage player hotbar configurations.
 
@@ -717,11 +770,11 @@ protected void execute(CommandContext ctx, Store<EntityStore> store,
     UICommandBuilder builder = new UICommandBuilder();
     builder.set("score.value", 100)
            .set("player.name", playerRef.getUsername())
-           .append("container", "<text id='greeting'>Hello!</text>");
+           .append("MyUI.ui");  // Load .ui file from Common/UI/Custom/
 
     // Build event handlers
     UIEventBuilder events = new UIEventBuilder();
-    events.addEventBinding(CustomUIEventBindingType.CLICK, "button");
+    events.addEventBinding(CustomUIEventBindingType.Activating, "button");
 
     // Send to client via managers
     // Implementation depends on specific UI type (Page, Window, HUD)
